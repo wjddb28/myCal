@@ -239,7 +239,7 @@ textarea.inp{min-height:64px;resize:vertical}
   .side.open{transform:none}
   .scrim.on{display:block;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:65}
   .only-m{display:grid}
-  .top{flex-wrap:wrap;padding:10px 12px;gap:6px}
+  .top{flex-wrap:wrap;padding:max(10px,env(safe-area-inset-top)) 12px 10px;gap:6px}
   .title{font-size:17px;min-width:0}
   .search{width:100%;order:3;margin:0}
   #prevY,#nextY{width:28px}
