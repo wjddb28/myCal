@@ -1,9 +1,0 @@
-{
-  "appId": "com.mycal.planner",
-  "appName": "나의 캘린더",
-  "webDir": "www",
-  "ios": {
-    "contentInset": "never",
-    "backgroundColor": "#f5f6f8"
-  }
-}
