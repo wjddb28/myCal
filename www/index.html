@@ -45,6 +45,8 @@ button{cursor:pointer}
 .cg-h button{border:0;background:none;color:var(--accent);font-size:12px;padding:2px 0;flex:none}
 #catList .legend + .cg-h{margin-top:6px}
 .legend li.more-h{color:var(--muted);font-size:12.5px}
+.legend .pin{border:0;background:none;padding:0 2px;font-size:15px;line-height:1;color:var(--faint);opacity:.45;flex:none}
+.legend .pin.on{color:#f5b301;opacity:1}
 .side .grow{flex:1 1 auto;min-height:140px;overflow:auto;margin-right:-6px;padding-right:6px}
 .side > *:not(.grow){flex:none}
 .up-day{font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
@@ -553,7 +555,7 @@ const CAP = window.Capacitor;
 const IS_NATIVE = !!CAP?.isNativePlatform?.();
 const Cal = IS_NATIVE ? (CAP.Plugins?.CapacitorCalendar || CAP.registerPlugin?.('CapacitorCalendar')) : null;
 /* 아이폰에서 직접 읽어온 일정/미리알림 (앱이 만든 것 제외) */
-const PH = {ready:false, loading:false, perm:{cal:'', rem:''}, calendars:[], lists:[], events:[], reminders:[], undated:[], win:null};
+const PH = {ready:false, loading:false, perm:{cal:'', rem:''}, calendars:[], lists:[], events:[], reminders:[], undated:[], win:null, openByList:null};
 const allEvents = () => IS_NATIVE ? S.events.concat(PH.events, PH.reminders) : S.events;
 
 /* 한국 공휴일 (고정 + 2025~2030 음력) */
@@ -612,11 +614,11 @@ S = load();
 
 const view = (() => {
   const t = new Date();
-  let v = {kind:'all', hiddenCats:[], hiddenTypes:[], dayOpen: innerWidth > 1100, fold:{}, showOff:{}};
+  let v = {kind:'all', hiddenCats:[], hiddenTypes:[], dayOpen: innerWidth > 1100, fold:{}, showOff:{}, showDone:{}, pinned:[]};
   try { v = {...v, ...JSON.parse(localStorage.getItem(VKEY) || '{}')}; } catch {}
   return {...v, y:t.getFullYear(), m:t.getMonth(), selected:fmt(t)};
 })();
-const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff})); } catch {} };
+const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff, showDone:view.showDone, pinned:view.pinned})); } catch {} };
 
 const cat = id => S.categories.find(c => c.id === id) || {id, name:'기타', color:'#64748b'};
 
@@ -810,17 +812,23 @@ function renderSide(){
   const monthOccs = allEvents().flatMap(e => occurrences(e, from, to));
   const catLi = (c, kind) => {
     const key = visKey(c.id, kind);
-    const n = monthOccs.filter(o => o.ev.cat === c.id && (!kind || o.ev.kind === kind)).length;
-    return `<li data-cat="${key}" class="${view.hiddenCats.includes(key) ? 'off' : ''}" style="--c:${c.color}" title="눌러서 보이기/숨기기"><span class="sw"></span><span class="nm">${esc(c.name)}</span><span class="ct">${n || ''}</span></li>`;
+    // 할 일 목록은 미리알림 앱처럼 '남은 할 일 수', 나머지는 이번 달 일정 수
+    const n = kind === 'todo' && openCount(c) != null ? openCount(c) : monthOccs.filter(o => o.ev.cat === c.id && (!kind || o.ev.kind === kind)).length;
+    const pin = view.pinned.includes(c.id);
+    return `<li data-cat="${key}" class="${view.hiddenCats.includes(key) ? 'off' : ''}" style="--c:${c.color}" title="눌러서 보이기/숨기기"><span class="sw"></span><span class="nm">${esc(c.name)}</span><span class="ct">${n || ''}</span><button class="pin ${pin ? 'on' : ''}" data-pin="${c.id}" title="${pin ? '고정 해제' : '맨 위에 고정'}">${pin ? '★' : '☆'}</button></li>`;
   };
   let cg = '';
   for (const g of catGroups()){
     const hid = c => view.hiddenCats.includes(visKey(c.id, g.kind));
-    const on = g.cats.filter(c => !hid(c)), off = g.cats.filter(hid), li = c => catLi(c, g.kind);
-    const fold = view.fold[g.key], showOff = view.showOff[g.key];
+    const on = sortPinned(g.cats.filter(c => !hid(c))), off = g.cats.filter(hid), li = c => catLi(c, g.kind);
+    // 할 일이 하나도 안 남은 목록(고정 제외)은 '끝난 목록'으로 접음
+    const finished = g.kind === 'todo' ? on.filter(c => !view.pinned.includes(c.id) && openCount(c) === 0) : [];
+    const shown = on.filter(c => !finished.includes(c));
+    const fold = view.fold[g.key], showOff = view.showOff[g.key], showDone = view.showDone[g.key];
     if (g.title) cg += `<div class="cg-h" data-fold="${g.key}"><span>${fold ? '▸' : '▾'} ${g.title}<span class="ct">${on.length}/${g.cats.length}</span></span><button data-all="${g.key}">${on.length ? '모두 끄기' : '모두 켜기'}</button></div>`;
     if (fold) continue;
-    cg += `<ul class="legend">${on.map(li).join('')}` +
+    cg += `<ul class="legend">${shown.map(li).join('')}` +
+      (finished.length ? `<li class="more-h" data-showdone="${g.key}"><span class="ty">${showDone ? '▴' : '▾'}</span><span class="nm">끝난 목록 ${finished.length}개 ${showDone ? '접기' : '보기'}</span></li>` + (showDone ? finished.map(li).join('') : '') : '') +
       (off.length ? `<li class="more-h" data-showoff="${g.key}"><span class="ty">${showOff ? '▴' : '▾'}</span><span class="nm">꺼 둔 ${off.length}개 ${showOff ? '접기' : '보기'}</span></li>` + (showOff ? off.map(li).join('') : '') : '') +
       '</ul>';
   }
@@ -1055,7 +1063,17 @@ function catGroups(){
     {key:'todo', title:'☑ 할 일 목록', kind:'todo', cats:S.categories.filter(c => c.listId || (loose(c) && td.has(c.id)))},
   ].filter(g => g.cats.length);
 }
+const openCount = c => PH.openByList && c.listId ? (PH.openByList[c.listId] || 0) : null;
+const sortPinned = cs => [...cs.filter(c => view.pinned.includes(c.id)), ...cs.filter(c => !view.pinned.includes(c.id))];
 $('#catList').onclick = e => {
+  const pin = e.target.closest('[data-pin]');
+  if (pin){
+    const id = pin.dataset.pin, P = view.pinned;
+    P.includes(id) ? P.splice(P.indexOf(id), 1) : P.push(id);
+    saveView(); renderSide(); return;
+  }
+  const sd = e.target.closest('[data-showdone]');
+  if (sd){ view.showDone[sd.dataset.showdone] = !view.showDone[sd.dataset.showdone]; saveView(); renderSide(); return; }
   const all = e.target.closest('[data-all]');
   if (all){
     const g = catGroups().find(x => x.key === all.dataset.all), h = view.hiddenCats;
@@ -1124,7 +1142,9 @@ function editorCats(){
   let list = S.categories;
   if (IS_NATIVE) list = list.filter(c => ED.kind === 'todo' ? (c.listId || !c.calId) : ((c.calId && !c.calRO) || (!c.calId && !c.listId)));
   const vis = list.filter(c => !view.hiddenCats.includes(visKey(c.id, ED.kind)) || c.id === ED.cat);
-  return vis.length ? vis : list;
+  const out = vis.length ? vis : list;
+  const rank = c => view.pinned.includes(c.id) ? 0 : openCount(c) === 0 ? 2 : 1;
+  return out.map((c, i) => [c, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
 }
 function renderCats(){
   const cs = editorCats();
@@ -2005,8 +2025,10 @@ const nativeQueue = (fn, what) => {
   nativeBusy = nativeBusy.then(fn).catch(err => toast(`아이폰 ${what}에 실패했어요: ${err?.message || err}`));
   return nativeBusy;
 };
-const nativeDelete = ev => nativeQueue(() => nativeRemoveIds(ev.nat), '삭제');
-const nativeSave = ev => ev && nativeQueue(() => nativeSaveNow(ev), '저장');
+let refreshT;
+const refreshSoon = () => { clearTimeout(refreshT); refreshT = setTimeout(() => phoneLoad(true), 1200); };
+const nativeDelete = ev => nativeQueue(() => nativeRemoveIds(ev.nat), '삭제').then(() => { if (ev.nat?.mode === 'reminder') refreshSoon(); });
+const nativeSave = ev => ev && nativeQueue(() => nativeSaveNow(ev), '저장').then(() => { if (ev.kind === 'todo') refreshSoon(); });
 async function nativeSaveNow(ev){
   if (!S.events.includes(ev)) return;  // 그 사이 삭제됨
   const mode = ev.kind === 'todo' ? 'reminder' : 'event';
@@ -2180,6 +2202,8 @@ async function phoneLoad(force){
     PH.reminders = []; PH.undated = [];
     if (PH.perm.rem === 'granted' && PH.lists.length){
       const rems = (await Cal.getRemindersFromLists({listIds:PH.lists.map(l => l.id)})).result || [];
+      PH.openByList = {};  // 목록별 남은(완료 안 한) 할 일 수
+      rems.forEach(r => { if (!r.isCompleted) PH.openByList[r.listId] = (PH.openByList[r.listId] || 0) + 1; });
       reconcileReminders(new Map(rems.map(r => [r.id, r])));
       const mineR = new Set(S.events.flatMap(e => e.nat?.mode === 'reminder' ? e.nat.ids : []));
       for (const r of rems){
@@ -2202,7 +2226,7 @@ function phoneToggleReminder(ev){
   ev.doneDates = done ? [ev.date || 'x'] : [];
   if (done && !ev.date) PH.undated = PH.undated.filter(x => x !== ev);
   render();
-  nativeQueue(async () => { await Cal.modifyReminder({id:ev.phone.id, isCompleted:done}); if (ev.phone.series) phoneLoad(true); }, '미리알림 변경');
+  nativeQueue(() => Cal.modifyReminder({id:ev.phone.id, isCompleted:done}), '미리알림 변경').then(refreshSoon);
 }
 function phoneReadOnly(ev, occDate){
   const todo = ev.kind === 'todo';
