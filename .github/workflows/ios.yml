@@ -1,0 +1,59 @@
+name: 아이폰 앱 빌드
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 최신 Xcode 선택
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          echo "사용할 Xcode: $XCODE"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: 패키지 설치
+        run: npm install --no-audit --no-fund
+
+      - name: iOS 프로젝트 생성
+        run: |
+          npx cap add ios
+          bash scripts/ios-setup.sh
+          npx cap sync ios
+
+      - name: 앱 빌드 (서명 없이 - 설치할 때 Sideloadly가 서명)
+        run: |
+          set -o pipefail
+          cd ios/App
+          if [ -d App.xcworkspace ]; then TARGET=(-workspace App.xcworkspace); else TARGET=(-project App.xcodeproj); fi
+          xcodebuild "${TARGET[@]}" -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*deprecated|BUILD|ARCHIVE" || true
+          test -d "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" || { tail -80 "$RUNNER_TEMP/build.log"; exit 1; }
+
+      - name: IPA 파일 만들기
+        run: |
+          cd "$RUNNER_TEMP"
+          mkdir -p Payload
+          cp -R App.xcarchive/Products/Applications/App.app Payload/
+          zip -qry MyCalendar.ipa Payload
+          ls -lh MyCalendar.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyCalendar-ipa
+          path: ${{ runner.temp }}/MyCalendar.ipa
+          retention-days: 30
