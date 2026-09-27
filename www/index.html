@@ -1458,6 +1458,11 @@ $('#fCats').onclick = e => {
   const b = e.target.closest('[data-cat]');
   if (b){ ED.cat = b.dataset.cat; renderCats(); }
 };
+/* 카테고리 칩·일정/할 일 전환을 눌러도 쓰고 있던 칸(제목·메모)의 키패드가 내려가지 않게.
+   버튼을 누를 때 입력칸에서 초점이 빠지는 기본 동작만 막고, 버튼 기능은 그대로 */
+const typing = () => document.activeElement?.matches('#evForm input[type=text], #evForm input:not([type]), #evForm textarea');
+['#fCats', '#fKind'].forEach(sel => ['pointerdown', 'mousedown'].forEach(type =>
+  $(sel).addEventListener(type, e => { if (e.target.closest('button') && typing()) e.preventDefault(); })));
 $('#fCats').addEventListener('keydown', e => {
   if (e.target.id === 'newCatName' && e.key === 'Enter'){ e.preventDefault(); addCatFromEditor(); }  // 폼 저장 대신 카테고리 추가
 });
