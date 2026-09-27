@@ -166,7 +166,9 @@ button{cursor:pointer}
 @keyframes flash{50%{box-shadow:0 0 0 3px var(--accent)}}
 
 /* ---------- day panel ---------- */
-.day{width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.day{width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.day-slide{flex:1;display:flex;flex-direction:column;min-height:0;will-change:transform}
+.day-h .dnav{width:30px;height:30px;font-size:20px}
 .day-h{padding:16px 18px 10px;display:flex;align-items:flex-start;gap:8px}
 .day-h .d{font-size:22px;font-weight:700;line-height:1.2}
 .day-h .w{font-size:13px;color:var(--muted)}
@@ -323,6 +325,37 @@ textarea.inp{min-height:64px;resize:vertical}
   .fab{bottom:calc(env(safe-area-inset-bottom) + 70px)}
   .toast{bottom:calc(env(safe-area-inset-bottom) + 70px)}
 }
+/* 폰: 꾹 눌러도 글자 선택·복사 메뉴가 뜨지 않게 (입력칸은 제외) */
+@media (hover:none){
+  body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+}
+.native body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.native input,.native textarea{-webkit-user-select:text;user-select:text}
+/* 일정 추가 창: 꺼 둔 카테고리 묶음, 새 카테고리 */
+.chip.more{border-style:dashed;color:var(--muted)}
+.chip.dim{opacity:.6}
+.chip.add{border-style:dashed;color:var(--accent)}
+.newcat{display:inline-flex;gap:6px;align-items:center}
+.newcat .inp{width:130px;padding:5px 10px}
+/* 카테고리 관리: 접는 묶음 + 끌어서 순서 바꾸기 */
+.cat-gh{display:flex;align-items:center;gap:6px;width:100%;border:0;background:var(--hover);border-radius:8px;padding:9px 10px;font-size:13px;font-weight:700;color:var(--text);text-align:left}
+.cat-gh .ct{font-weight:500;color:var(--muted)}
+.cat-list{display:flex;flex-direction:column;gap:8px}
+.grip{flex:none;width:28px;height:34px;display:grid;place-items:center;font-size:18px;color:var(--faint);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.catrow.dragging{background:var(--panel);box-shadow:var(--shadow);border-radius:8px;position:relative;z-index:2}
+.catrow.dragging .grip{cursor:grabbing;color:var(--accent)}
+/* 일정 목록: 오늘 강조 */
+.ag-today{margin:10px 10px 6px;border-radius:14px;background:var(--accent-soft);padding:2px 0 8px;overflow:hidden}
+.ag-today .ag-dh{color:var(--accent);display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.ag-today .ag-dh small{font-size:12px;font-weight:600;opacity:.8}
+.ag-today .ag-it:hover,.ag-today .ag-it:active{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.ag-today .ag-empty{color:var(--accent);opacity:.7}
+.ag-it.past{opacity:.45}
+.ag-sep{margin:3px 16px 3px 32px;border-top:1px dashed var(--line)}
+.ag-today .ag-sep{border-top-color:color-mix(in srgb,var(--accent) 22%,transparent)}
+.ag-now{display:flex;align-items:center;gap:6px;margin:2px 16px;color:var(--sun);font-size:11px;font-weight:700}
+.ag-now::after{content:"";flex:1;height:1.5px;background:var(--sun);border-radius:1px}
 </style>
 </head>
 <body>
@@ -700,7 +733,7 @@ const view = (() => {
   try { v = {...v, ...JSON.parse(localStorage.getItem(VKEY) || '{}')}; } catch {}
   return {...v, y:t.getFullYear(), m:t.getMonth(), selected:fmt(t)};
 })();
-const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff, showDone:view.showDone, pinned:view.pinned, theme:view.theme, weekStart:view.weekStart, swipe:view.swipe, page:view.page, listKind:view.listKind, showLate:view.showLate, showUndated:view.showUndated})); } catch {} };
+const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff, showDone:view.showDone, pinned:view.pinned, theme:view.theme, weekStart:view.weekStart, swipe:view.swipe, page:view.page, listKind:view.listKind, showLate:view.showLate, showUndated:view.showUndated, catEditFold:view.catEditFold})); } catch {} };
 
 const cat = id => S.categories.find(c => c.id === id) || {id, name:'기타', color:'#64748b'};
 
@@ -939,22 +972,23 @@ function renderDay(){
   const shown = occs.filter(o => isVisible(o.ev));
   const hiddenN = occs.length - shown.length;
   const evs = shown.filter(o => o.ev.kind === 'event'), todos = shown.filter(o => o.ev.kind === 'todo');
-  const doneN = todos.filter(o => isDone(o.ev, d)).length;
+  const doneN = todos.filter(o => isDone(o.ev, o.start)).length;  // 기간 할 일은 첫날 기준으로 완료 저장
   const row = o => {
-    const ev = o.ev, c = cat(ev.cat), done = ev.kind === 'todo' && isDone(ev, d);
+    const ev = o.ev, c = cat(ev.cat), done = ev.kind === 'todo' && isDone(ev, o.start);
     let extra = '';
     if (ev.type === 'period') extra = `${md(ev.date)}~${md(ev.endDate)} (${diffDays(ev.date, d)+1}/${diffDays(ev.date, ev.endDate)+1}일째)`;
     else if (ev.type === 'recurring') extra = ruleText(ev);
     return `<div class="row-ev ${done ? 'done' : ''}" style="--c:${c.color}" data-id="${ev.id}" data-date="${d}">
       ${ev.kind === 'todo' ? `<span class="ck ${done?'on':''}" data-toggle="${ev.id}|${o.start}"></span>` : '<span class="bar"></span>'}
       <div style="flex:1;min-width:0"><div class="t">${esc(ev.title)}</div>
-      <div class="m"><span>${timeText(ev)}</span><span class="tag">${esc(c.name)}</span>${ev.type === 'multi' ? '' : `<span class="tag gray">${TYPES[ev.type].icon} ${TYPES[ev.type].label}</span>`}${ev.origin === 'icloud' ? '<span class="tag gray"> iCloud</span>' : ev.origin === 'google' ? '<span class="tag gray">G 구글</span>' : ''}${extra ? `<span>${esc(extra)}</span>` : ''}</div>
+      <div class="m"><span>${timeText(ev)}</span><span class="tag">${esc(c.name)}</span>${ev.type === 'multi' || ev.type === 'single' ? '' : `<span class="tag gray">${TYPES[ev.type].icon} ${TYPES[ev.type].label}</span>`}${ev.origin === 'icloud' ? '<span class="tag gray"> iCloud</span>' : ev.origin === 'google' ? '<span class="tag gray">G 구글</span>' : ''}${extra ? `<span>${esc(extra)}</span>` : ''}</div>
       ${ev.memo ? `<div class="m">${esc(ev.memo)}</div>` : ''}</div></div>`;
   };
-  el.innerHTML = `
+  el.innerHTML = `<div class="day-slide">
     <div class="day-h"><div style="flex:1"><div class="d">${dt.getMonth()+1}월 ${dt.getDate()}일</div>
       <div class="w">${dt.getFullYear()}년 · ${WD[dt.getDay()]}요일${d === todayStr() ? ' · 오늘' : ''}</div>
       ${hol ? `<div class="hol">${hol}</div>` : ''}</div>
+      <button class="icon dnav" data-dnav="-1" title="전날">‹</button><button class="icon dnav" data-dnav="1" title="다음 날">›</button>
       <button class="icon" id="dayClose" title="닫기">✕</button></div>
     <div class="day-acts"><button class="btn sm" data-new="event">＋ 일정</button><button class="btn sm" data-new="todo">☑ 할 일</button></div>
     <div class="day-b">
@@ -963,8 +997,63 @@ function renderDay(){
       <h5><span>☑ 할 일 ${todos.length}</span>${todos.length ? `<span>${doneN}/${todos.length} 완료</span>` : ''}</h5>
       ${todos.map(row).join('') || '<div class="empty" style="padding-left:8px">할 일이 없어요</div>'}
       ${hiddenN ? `<div class="empty" style="margin-top:12px">필터로 숨겨진 항목 ${hiddenN}개</div>` : ''}
-    </div>`;
+    </div></div>`;
 }
+/* 날짜 목록: 전날/다음 날로 넘기기 (버튼 또는 좌우 스와이프) */
+let daySliding = false;
+function slideDay(dir, fromSwipe){
+  const slide = $('#day .day-slide'), next = addDays(view.selected, dir);
+  if (daySliding) return;
+  if (!slide || matchMedia('(prefers-reduced-motion: reduce)').matches){ selectDay(next); return; }
+  daySliding = true;
+  const w = $('#day').clientWidth, out = fromSwipe ? 150 : 180;
+  slide.style.transition = `transform ${out}ms ease-in, opacity ${out}ms ease-in`;
+  slide.style.transform = `translateX(${-dir * w}px)`;
+  slide.style.opacity = '0';
+  setTimeout(() => {
+    selectDay(next);  // 목록 새로 그림 (월이 바뀌면 뒤의 달력도 넘어감)
+    const s2 = $('#day .day-slide');
+    if (s2){
+      s2.style.transition = 'none';
+      s2.style.transform = `translateX(${dir * w * .35}px)`;
+      s2.style.opacity = '0';
+      void s2.offsetWidth;
+      s2.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s';
+      s2.style.transform = ''; s2.style.opacity = '';
+    }
+    setTimeout(() => { daySliding = false; }, 230);
+  }, out);
+}
+let dsw = null;
+$('#day').addEventListener('touchstart', e => {
+  if (daySliding || e.touches.length !== 1 || e.target.closest('input,textarea')) return;
+  dsw = {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), dx:0, lock:null};
+}, {passive:true});
+$('#day').addEventListener('touchmove', e => {
+  if (!dsw) return;
+  const dx = e.touches[0].clientX - dsw.x, dy = e.touches[0].clientY - dsw.y;
+  if (!dsw.lock){
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+    dsw.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';  // 세로면 목록 스크롤
+  }
+  if (dsw.lock !== 'x') return;
+  e.preventDefault();
+  dsw.dx = dx;
+  const slide = $('#day .day-slide'), w = $('#day').clientWidth;
+  if (slide){ slide.style.transition = 'none'; slide.style.transform = `translateX(${dx}px)`; slide.style.opacity = String(1 - Math.min(Math.abs(dx) / w, 1) * .6); }
+}, {passive:false});
+const endDaySwipe = () => {
+  const s = dsw; dsw = null;
+  if (!s || s.lock !== 'x') return;
+  const w = $('#day').clientWidth, speed = Math.abs(s.dx) / Math.max(1, Date.now() - s.t);
+  if (Math.abs(s.dx) > w * .25 || (speed > .6 && Math.abs(s.dx) > 50)) slideDay(s.dx < 0 ? 1 : -1, true);
+  else {  // 제자리로
+    const slide = $('#day .day-slide');
+    if (slide){ slide.style.transition = 'transform .2s ease-out, opacity .2s'; slide.style.transform = ''; slide.style.opacity = ''; }
+  }
+};
+$('#day').addEventListener('touchend', endDaySwipe);
+$('#day').addEventListener('touchcancel', endDaySwipe);
 
 function render(){ renderCalendar(); renderSide(); renderDay(); if (view.page === 'list') renderAgenda(); }
 
@@ -1134,7 +1223,15 @@ addEventListener('mouseup', () => {
     openEditor({kind:'event', type:'period', date:a, endDate:b});
   }
 });
+const isPhone = () => matchMedia('(max-width:860px)').matches;
 weeksEl.addEventListener('click', e => {
+  if (isPhone()){
+    // 작은 일정 칸 대신 날짜 단위로: 누르면 그날 목록, 목록이 열려 있으면 닫고 달력 전체 보기
+    if (view.dayOpen){ view.dayOpen = false; saveView(); render(); return; }
+    const cell = document.elementsFromPoint(e.clientX, e.clientY).find(el => el.classList?.contains('cell'));
+    if (cell) selectDay(cell.dataset.date);
+    return;
+  }
   const tg = e.target.closest('[data-toggle]');
   if (tg){ e.stopPropagation(); const [id, d] = tg.dataset.toggle.split('|'); toggleDone(id, d); return; }
   const it = e.target.closest('.item');
@@ -1145,13 +1242,15 @@ weeksEl.addEventListener('click', e => {
   if (cell) selectDay(cell.dataset.date);
 });
 weeksEl.addEventListener('dblclick', e => {
-  if (e.target.closest('.item,.more')) return;
+  if (isPhone() || e.target.closest('.item,.more')) return;
   const cell = e.target.closest('.cell');
   if (cell) openEditor({kind:'event', date:cell.dataset.date});
 });
 
 $('#day').addEventListener('click', e => {
   if (e.target.closest('#dayClose')){ view.dayOpen = false; saveView(); render(); return; }
+  const dn = e.target.closest('[data-dnav]');
+  if (dn){ slideDay(+dn.dataset.dnav); return; }
   const nw = e.target.closest('[data-new]');
   if (nw){ openEditor({kind:nw.dataset.new, date:view.selected}); return; }
   const tg = e.target.closest('[data-toggle]');
@@ -1240,18 +1339,42 @@ function setKind(k){
   form.querySelector('h3').textContent = (ED.id ? '' : '새 ') + (k === 'todo' ? '할 일' : '일정');
   $('#fTitle').placeholder = k === 'todo' ? '무엇을 해야 하나요?' : '일정 제목';
 }
+/* 일정 추가 창의 카테고리: 자주 쓰는 것(shown)과 꺼 둔·끝난 것(extra)으로 나눔 */
 function editorCats(){
   let list = S.categories;
   if (IS_NATIVE) list = list.filter(c => ED.kind === 'todo' ? (c.listId || !c.calId) : ((c.calId && !c.calRO) || (!c.calId && !c.listId)));
-  const vis = list.filter(c => !view.hiddenCats.includes(visKey(c.id, ED.kind)) || c.id === ED.cat);
-  const out = vis.length ? vis : list;
-  const rank = c => view.pinned.includes(c.id) ? 0 : openCount(c) === 0 ? 2 : 1;
-  return out.map((c, i) => [c, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
+  const pinned = c => view.pinned.includes(c.id);
+  const tucked = c => c.id !== ED.cat && (view.hiddenCats.includes(visKey(c.id, ED.kind)) || (ED.kind === 'todo' && !pinned(c) && openCount(c) === 0));
+  const shown = [...list.filter(c => pinned(c) && !tucked(c)), ...list.filter(c => !pinned(c) && !tucked(c))];
+  const extra = list.filter(tucked);
+  return shown.length ? {shown, extra} : {shown:extra, extra:[]};
 }
 function renderCats(){
-  const cs = editorCats();
-  if (!cs.some(c => c.id === ED.cat) && cs[0]) ED.cat = cs[0].id;
-  $('#fCats').innerHTML = cs.map(c => `<button type="button" class="chip ${ED.cat === c.id ? 'on' : ''}" style="--c:${c.color}" data-cat="${c.id}"><span class="sw"></span>${esc(c.name)}</button>`).join('');
+  const {shown, extra} = editorCats();
+  const all = [...shown, ...extra];
+  if (!all.some(c => c.id === ED.cat) && shown[0]) ED.cat = shown[0].id;
+  const chip = (c, dim) => `<button type="button" class="chip ${ED.cat === c.id ? 'on' : ''} ${dim ? 'dim' : ''}" style="--c:${c.color}" data-cat="${c.id}"><span class="sw"></span>${esc(c.name)}</button>`;
+  $('#fCats').innerHTML = shown.map(c => chip(c)).join('') +
+    (extra.length ? `<button type="button" class="chip more" data-catmore>${ED.moreCats ? '접기 ▴' : `꺼 둔 카테고리 ${extra.length}개 ▾`}</button>` + (ED.moreCats ? extra.map(c => chip(c, true)).join('') : '') : '') +
+    (ED.addingCat
+      ? `<span class="newcat"><input class="inp" id="newCatName" placeholder="새 카테고리 이름" enterkeyhint="done"><button type="button" class="btn sm primary" data-catok>추가</button><button type="button" class="btn sm" data-catcancel>취소</button></span>`
+      : `<button type="button" class="chip add" data-catadd>＋ 새 카테고리</button>`);
+}
+const CAT_COLORS = ['#f97316','#eab308','#ec4899','#14b8a6','#8b5cf6','#84cc16','#0ea5e9','#ef4444','#6366f1','#22c55e'];
+function newCategory(name){
+  const used = new Set(S.categories.map(c => c.color.toLowerCase()));
+  const color = CAT_COLORS.find(x => !used.has(x)) || CAT_COLORS[S.categories.length % CAT_COLORS.length];
+  const c = {id:'c-' + uid(), name, color, user:true};
+  S.categories.unshift(c);  // 맨 위에 추가
+  save(); renderSide();
+  return c;
+}
+function addCatFromEditor(){
+  const name = $('#newCatName')?.value.trim();
+  if (!name){ $('#newCatName')?.focus(); return toast('카테고리 이름을 입력해 주세요'); }
+  const c = newCategory(name);
+  ED.cat = c.id; ED.addingCat = false; renderCats();
+  toast(IS_NATIVE ? `“${name}” 추가 — 저장하면 아이폰에도 ${ED.kind === 'todo' ? '미리알림 목록' : '캘린더'}로 만들어져요` : `“${name}” 카테고리를 추가했어요`);
 }
 function renderWd(){
   $('#fWd').hidden = $('#fFreq').value !== 'weekly';
@@ -1311,7 +1434,17 @@ function openEditor(init = {}, occDate){
 
 $('#fKind').onclick = e => { const b = e.target.closest('button'); if (b){ setKind(b.dataset.v); renderCats(); if (b.dataset.v === 'todo' && !ED.id) { $('#fAllDay').checked = true; syncAllDay(); } } };
 $('#fType').onclick = e => { const b = e.target.closest('button'); if (b) setType(b.dataset.v); };
-$('#fCats').onclick = e => { const b = e.target.closest('[data-cat]'); if (b){ ED.cat = b.dataset.cat; renderCats(); } };
+$('#fCats').onclick = e => {
+  if (e.target.closest('[data-catmore]')){ ED.moreCats = !ED.moreCats; renderCats(); return; }
+  if (e.target.closest('[data-catadd]')){ ED.addingCat = true; renderCats(); $('#newCatName').focus(); return; }
+  if (e.target.closest('[data-catcancel]')){ ED.addingCat = false; renderCats(); return; }
+  if (e.target.closest('[data-catok]')){ addCatFromEditor(); return; }
+  const b = e.target.closest('[data-cat]');
+  if (b){ ED.cat = b.dataset.cat; renderCats(); }
+};
+$('#fCats').addEventListener('keydown', e => {
+  if (e.target.id === 'newCatName' && e.key === 'Enter'){ e.preventDefault(); addCatFromEditor(); }  // 폼 저장 대신 카테고리 추가
+});
 $('#fWd').onclick = e => { const b = e.target.closest('[data-wd]'); if (!b) return; const i = +b.dataset.wd; ED.wd.includes(i) ? ED.wd.splice(ED.wd.indexOf(i), 1) : ED.wd.push(i); renderWd(); };
 $('#fFreq').onchange = renderWd; $('#fRDate').onchange = renderWd;
 $('#fPS').onchange = () => { if ($('#fPE').value < $('#fPS').value) $('#fPE').value = $('#fPS').value; periodLen(); };
@@ -1434,13 +1567,49 @@ function toast(msg, action, fn){
    ========================================================= */
 let justAdded = null;
 function renderCatEdit(){
-  const row = (c, g, i, n) => `<div class="catrow ${c.id === justAdded ? 'new' : ''}" data-id="${c.id}">
-    <button class="mv" data-mv="-1" data-g="${g}" ${i === 0 ? 'disabled' : ''} title="위로">▲</button><button class="mv" data-mv="1" data-g="${g}" ${i === n - 1 ? 'disabled' : ''} title="아래로">▼</button>
+  const row = c => `<div class="catrow ${c.id === justAdded ? 'new' : ''}" data-id="${c.id}">
+    <span class="grip" title="끌어서 순서 바꾸기" aria-label="끌어서 순서 바꾸기">≡</span>
     <input type="color" value="${c.color}" data-f="color"><input class="inp" value="${esc(c.name)}" data-f="name">
     ${c.calId || c.listId ? '<span title="아이폰과 연결됨">📱</span>' : ''}<button class="icon" data-del title="삭제">🗑</button></div>`;
-  $('#catEdit').innerHTML = catGroups().map(g => (g.title ? `<div class="cat-gh">${g.title}</div>` : '') + g.cats.map((c, i) => row(c, g.key, i, g.cats.length)).join('')).join('') +
-    '<div class="hint">▲▼로 순서를 바꾸면 메뉴와 일정 추가 창에 같은 순서로 보여요. 색을 바꾸면 모든 일정에 바로 반영돼요. 카테고리를 지우면 해당 일정은 “기타”로 옮겨져요.</div>';
+  view.catEditFold = view.catEditFold || {};
+  $('#catEdit').innerHTML = catGroups().map(g => {
+    const fold = g.title && view.catEditFold[g.key] !== false;  // 묶음은 기본으로 접혀 있음
+    return (g.title ? `<button type="button" class="cat-gh" data-cefold="${g.key}">${fold ? '▸' : '▾'} ${g.title} <span class="ct">${g.cats.length}</span></button>` : '') +
+      (fold ? '' : `<div class="cat-list" data-g="${g.key}">${g.cats.map(row).join('')}</div>`);
+  }).join('') +
+    '<div class="hint">≡를 끌어서 순서를 바꾸면 메뉴와 일정 추가 창에 같은 순서로 보여요. 색을 바꾸면 모든 일정에 바로 반영돼요. 카테고리를 지우면 해당 일정은 “기타”로 옮겨져요.</div>';
 }
+// 끌어서 순서 바꾸기 (마우스·손가락 모두)
+let catDrag = null;
+$('#catEdit').addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.grip'); if (!grip) return;
+  e.preventDefault();
+  const row = grip.closest('.catrow');
+  catDrag = {row, list:row.parentElement};
+  row.classList.add('dragging');
+  grip.setPointerCapture?.(e.pointerId);
+});
+$('#catEdit').addEventListener('pointermove', e => {
+  if (!catDrag) return;
+  const {row, list} = catDrag;
+  const next = [...list.children].filter(r => r !== row).find(r => { const b = r.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
+  if (next){ if (row.nextElementSibling !== next) list.insertBefore(row, next); }
+  else if (list.lastElementChild !== row) list.appendChild(row);
+  const sheet = list.closest('.sheet'), sb = sheet.getBoundingClientRect();  // 가장자리에서 자동 스크롤
+  if (e.clientY < sb.top + 70) sheet.scrollTop -= 10; else if (e.clientY > sb.bottom - 70) sheet.scrollTop += 10;
+});
+function endCatDrag(){
+  if (!catDrag) return;
+  const {row, list} = catDrag; catDrag = null;
+  row.classList.remove('dragging');
+  // 이 묶음이 차지하던 자리들에 새 순서대로 다시 채움
+  const items = [...list.children].map(r => S.categories.find(c => c.id === r.dataset.id)).filter(Boolean);
+  const slots = items.map(c => S.categories.indexOf(c)).sort((a, b) => a - b);
+  slots.forEach((slot, i) => { S.categories[slot] = items[i]; });
+  justAdded = null; save(); render();
+}
+$('#catEdit').addEventListener('pointerup', endCatDrag);
+$('#catEdit').addEventListener('pointercancel', endCatDrag);
 $('#manageCats').onclick = () => { renderCatEdit(); $('#catModal').hidden = false; };
 $('#catEdit').addEventListener('input', e => {
   const row = e.target.closest('.catrow'), c = S.categories.find(x => x.id === row?.dataset.id);
@@ -1448,18 +1617,8 @@ $('#catEdit').addEventListener('input', e => {
   if (IS_NATIVE && c.calId && !c.calRO){ clearTimeout(c._t); c._t = setTimeout(() => Cal.modifyCalendar({id:c.calId, title:c.name, color:c.color}).catch(() => {}), 600); }
 });
 $('#catEdit').addEventListener('click', e => {
-  const mv = e.target.closest('[data-mv]');
-  if (mv){
-    // 같은 묶음 안에서 바로 위/아래 카테고리와 자리 바꾸기
-    const g = catGroups().find(x => x.key === mv.dataset.g), id = mv.closest('.catrow').dataset.id;
-    const i = g.cats.findIndex(c => c.id === id), other = g.cats[i + +mv.dataset.mv];
-    if (!other) return;
-    const a = S.categories.findIndex(c => c.id === id), b = S.categories.indexOf(other);
-    [S.categories[a], S.categories[b]] = [S.categories[b], S.categories[a]];
-    justAdded = null; save(); renderCatEdit(); render();
-    $(`#catEdit .catrow[data-id="${id}"] [data-mv="${mv.dataset.mv}"]`)?.focus();
-    return;
-  }
+  const f = e.target.closest('[data-cefold]');
+  if (f){ const k = f.dataset.cefold; view.catEditFold[k] = view.catEditFold[k] === false; saveView(); renderCatEdit(); return; }
   if (!e.target.closest('[data-del]')) return;
   if (S.categories.length <= 1) return toast('카테고리는 하나 이상 필요해요');
   const id = e.target.closest('.catrow').dataset.id;
@@ -1471,10 +1630,10 @@ $('#catEdit').addEventListener('click', e => {
   save(); renderCatEdit(); render();
 });
 $('#addCat').onclick = () => {
-  const colors = ['#f97316','#eab308','#ec4899','#14b8a6','#8b5cf6','#84cc16','#0ea5e9'];
-  const c = {id:'c-' + uid(), name:'새 카테고리', color:colors[S.categories.length % colors.length], user:true};
-  S.categories.unshift(c);  // 맨 위에 추가
-  justAdded = c.id; save(); renderCatEdit(); render();
+  const c = newCategory('새 카테고리');
+  const g = catGroups().find(x => x.cats.includes(c));
+  if (g){ view.catEditFold = view.catEditFold || {}; view.catEditFold[g.key] = false; saveView(); }  // 새 카테고리가 든 묶음은 펼침
+  justAdded = c.id; renderCatEdit(); render();
   $('#catEdit').closest('.sheet').scrollTop = 0;
   $(`#catEdit .catrow[data-id="${c.id}"] .inp`)?.select();
 };
@@ -2404,7 +2563,12 @@ async function phoneInit(){
   for (const ev of S.events) if (!ev.nat) nativeSave(ev);  // 권한을 늦게 준 경우, 그동안 앱에만 있던 일정도 아이폰으로
 }
 $('#phoneReload').onclick = async () => { await phoneLoadMeta().catch(() => {}); await phoneLoad(true); phoneStatusText(); toast('아이폰에서 다시 불러왔어요'); };
-document.addEventListener('visibilitychange', () => { if (!document.hidden && IS_NATIVE) phoneLoad(true); });  // 캘린더 앱에서 돌아오면 새로고침
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (IS_NATIVE) phoneLoad(true);
+  if (view.page === 'list') renderAgenda();  // '지금' 선 위치 갱신
+});
+setInterval(() => { if (view.page === 'list' && !document.hidden) renderAgenda(); }, 60000);  // 캘린더 앱에서 돌아오면 새로고침
 $('#fab').onclick = () => view.page === 'list'
   ? openEditor({kind:view.listKind === 'todo' ? 'todo' : 'event', date:todayStr()})
   : openEditor({kind:'event', date:view.selected});
@@ -2422,7 +2586,7 @@ function lateTodos(){
     .filter(o => o.end < t && !isDone(o.ev, o.start))
     .sort((a, b) => a.start.localeCompare(b.start));
 }
-function agRow(o, withDate){
+function agRow(o, withDate, past){
   const ev = o.ev, c = cat(ev.cat), todo = ev.kind === 'todo';
   const bits = [];
   if (withDate) bits.push(`${md(o.start)} (${WD[parse(o.start).getDay()]})`);
@@ -2430,9 +2594,35 @@ function agRow(o, withDate){
   if (ev.type === 'period' && o.end) bits.push(`~${md(o.end)}`);
   bits.push(esc(c.name));
   const rep = ev.type === 'recurring' || ev.phone?.series ? ' <span class="m">↻</span>' : '';
-  return `<div class="ag-it" style="--c:${c.color}" data-id="${ev.id}" data-date="${o.start || ''}">` +
+  return `<div class="ag-it ${past ? 'past' : ''}" style="--c:${c.color}" data-id="${ev.id}" data-date="${o.start || ''}">` +
     (todo ? `<span class="ck" data-toggle="${ev.id}|${o.start || ''}"></span>` : '<span class="bar"></span>') +
     `<div style="flex:1;min-width:0"><div class="t">${esc(ev.title)}${rep}</div><div class="m">${bits.join(' · ')}</div></div></div>`;
+}
+/* 하루 목록: 일정 먼저, 할 일은 얇은 점선 아래 (둘 다 있을 때만) */
+function agRows(items){
+  const sorted = items.sort(cmpOcc), i = sorted.findIndex(o => o.ev.kind === 'todo');
+  const rows = sorted.map(o => agRow(o, false));
+  if (i > 0) rows.splice(i, 0, '<div class="ag-sep"></div>');
+  return rows.join('');
+}
+/* 오늘: 색 카드 + 개수 요약 + '지금' 선 + 이미 끝난 일정은 흐리게 */
+function agTodayBox(items, title){
+  const now = hm(new Date());
+  const ev = items.filter(o => o.ev.kind === 'event').length, td = items.length - ev;
+  const sum = [ev ? `일정 ${ev}` : '', td ? `할 일 ${td}` : ''].filter(Boolean).join(' · ');
+  const timed = o => o.ev.kind === 'event' && !o.ev.allDay && o.start === o.end;
+  let body = '', nowShown = false;
+  const sorted = items.sort(cmpOcc), lastTimed = sorted.filter(timed).pop();
+  const hasEvent = sorted.some(o => o.ev.kind === 'event');
+  let sepShown = false;
+  for (const o of sorted){
+    if (!sepShown && hasEvent && o.ev.kind === 'todo'){ body += '<div class="ag-sep"></div>'; sepShown = true; }  // 일정 | 할 일 구분
+    if (!nowShown && timed(o) && o.ev.startTime > now){ body += `<div class="ag-now">지금 ${now}</div>`; nowShown = true; }
+    body += agRow(o, false, timed(o) && (o.ev.endTime || o.ev.startTime) <= now);
+    if (!nowShown && o === lastTimed){ body += `<div class="ag-now">지금 ${now}</div>`; nowShown = true; }
+  }
+  return `<div class="ag-today"><div class="ag-dh">${title}<small>${sum}</small></div>` +
+    (body || `<div class="ag-empty">${view.listKind === 'todo' ? '할 일 없음' : '일정 없음'}</div>`) + '</div>';
 }
 function renderAgenda(reset){
   const el = $('#agenda'), t = todayStr(), y = parse(t).getFullYear();
@@ -2456,8 +2646,9 @@ function renderAgenda(reset){
     const dt = parse(d), hol = holiday(d);
     const label = d === t ? '오늘 · ' : d === addDays(t, 1) ? '내일 · ' : '';
     const cls = d === t ? 'today' : (dt.getDay() === 0 || hol) ? 'sun' : dt.getDay() === 6 ? 'sat' : '';
+    if (d === t){ h += agTodayBox(items || [], `${label}${dt.getMonth() + 1}/${dt.getDate()} (${WD[dt.getDay()]})${hol ? ' · ' + hol : ''}`); continue; }
     h += `<div class="ag-dh ${cls}">${label}${dt.getMonth() + 1}/${dt.getDate()} (${WD[dt.getDay()]})${dt.getFullYear() !== y ? ' · ' + dt.getFullYear() : ''}${hol ? ' · ' + hol : ''}</div>` +
-      (items ? items.sort(cmpOcc).map(o => agRow(o, false)).join('') : `<div class="ag-empty">${view.listKind === 'todo' ? '할 일 없음' : '일정 없음'}</div>`);
+      (items ? agRows(items) : `<div class="ag-empty">${view.listKind === 'todo' ? '할 일 없음' : '일정 없음'}</div>`);
   }
   h += AG.days < AG_MAX ? '<div class="ag-more" id="agMore">불러오는 중…</div>' : '<div class="ag-end">2년 뒤까지 모두 보여드렸어요</div>';
   const top = el.scrollTop;
