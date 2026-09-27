@@ -123,7 +123,12 @@ button{cursor:pointer}
 .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
 .dow div{padding:7px 8px;font-size:12px;font-weight:600;color:var(--muted)}
 .dow .d0{color:var(--sun)} .dow .d6{color:var(--sat)}
-.weeks{flex:1;display:flex;flex-direction:column;min-height:0;will-change:transform}
+.weeks{flex:1;display:flex;flex-direction:column;min-height:0}
+.track{flex:1;position:relative;display:flex;flex-direction:column;min-height:0;will-change:transform}
+.weeks.mside{position:absolute;top:0;bottom:0;width:100%;pointer-events:none;background:var(--panel)}
+#weeksPrev{left:-100%;border-right:1px solid var(--line)}
+#weeksNext{left:100%;border-left:1px solid var(--line)}
+.mlabel{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:3;font-size:12.5px;font-weight:700;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:3px 12px;border-radius:99px;white-space:nowrap}
 .week{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:26px repeat(var(--R),20px) 1fr;row-gap:2px;border-bottom:1px solid var(--line);overflow:hidden}
 .week:last-child{border-bottom:0}
 .cell{grid-row:1/-1;border-right:1px solid var(--line2);padding:3px 6px;cursor:pointer;min-width:0}
@@ -367,7 +372,11 @@ textarea.inp{min-height:64px;resize:vertical}
     <div class="popover" id="picker" hidden></div>
     <div class="cal" id="cal">
       <div class="dow" id="dow"></div>
-      <div class="weeks" id="weeks"></div>
+      <div class="track" id="track">
+        <div class="weeks mside" id="weeksPrev" aria-hidden="true"></div>
+        <div class="weeks" id="weeks"></div>
+        <div class="weeks mside" id="weeksNext" aria-hidden="true"></div>
+      </div>
     </div>
     <div class="agenda" id="agenda"></div>
   </main>
@@ -849,12 +858,20 @@ function itemHTML(p, ws){
 }
 
 function renderCalendar(){
-  const {y, m} = view;
-  $('#title').textContent = `${y}년 ${m+1}월`;
-  const {from, to, weeks} = monthRange(y, m);
+  $('#title').textContent = `${view.y}년 ${view.m+1}월`;
   renderDow();
+  weeksEl.innerHTML = monthHTML(view.y, view.m, weeksEl.clientHeight);
+}
+/* 양옆 칸에 이전/다음 달 그리기 (스와이프·넘김 때 옆 달이 이어서 보이도록) */
+function renderSides(back = 1, fwd = 1){
+  const side = (el, d) => { el.innerHTML = `<div class="mlabel">${d.getFullYear()}년 ${d.getMonth()+1}월</div>` + monthHTML(d.getFullYear(), d.getMonth(), weeksEl.clientHeight); };
+  side($('#weeksPrev'), new Date(view.y, view.m - back, 1));
+  side($('#weeksNext'), new Date(view.y, view.m + fwd, 1));
+}
+function monthHTML(y, m, height){
+  const {from, to, weeks} = monthRange(y, m);
   const occs = visibleOccs(from, to);
-  const h = weeksEl.clientHeight || 600;
+  const h = height || 600;
   const R = Math.max(2, Math.min(12, Math.floor((h / weeks - 30) / 22)));
   const t = todayStr();
   let html = '';
@@ -876,7 +893,7 @@ function renderCalendar(){
     }
     html += `<div class="week" style="--R:${R}">${cells}${vis.map(p => itemHTML(p, ws)).join('')}${more}</div>`;
   }
-  weeksEl.innerHTML = html;
+  return html;
 }
 
 /* =========================================================
@@ -971,25 +988,26 @@ function jumpTo(ds, id){
 }
 /* 달력을 옆으로 미끄러뜨리며 달 이동 (dir: -1 이전, 1 다음. step: 이동할 개월 수) */
 let sliding = false;
-const resetSlide = () => { weeksEl.style.transition = ''; weeksEl.style.transform = ''; weeksEl.style.opacity = ''; };
+const trackEl = $('#track');
+const resetSlide = () => { trackEl.style.transition = ''; trackEl.style.transform = ''; };
 function slideMonth(step, fromSwipe){
   const dir = Math.sign(step);
   if (sliding) return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches){ resetSlide(); shiftMonth(step); return; }
   sliding = true;
-  const w = $('#cal').clientWidth;
-  weeksEl.style.transition = 'transform .15s ease-in, opacity .15s ease-in';
-  weeksEl.style.transform = `translateX(${-dir * w * (fromSwipe ? 1 : .3)}px)`;
-  weeksEl.style.opacity = '0';
+  // 버튼으로 넘길 때: 가려는 달(1년 이동이면 1년 뒤/앞)을 옆 칸에 미리 그림. 스와이프는 이미 그려져 있음
+  if (!fromSwipe) renderSides(step < 0 ? -step : 1, step > 0 ? step : 1);
+  const w = $('#cal').clientWidth, dur = fromSwipe ? 220 : 300;
+  trackEl.style.transition = `transform ${dur}ms cubic-bezier(.2,.8,.2,1)`;
+  trackEl.style.transform = `translateX(${-dir * w}px)`;
   setTimeout(() => {
-    shiftMonth(step);
-    weeksEl.style.transition = 'none';
-    weeksEl.style.transform = `translateX(${dir * w * .3}px)`;
-    void weeksEl.offsetWidth;
-    weeksEl.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s';
-    weeksEl.style.transform = ''; weeksEl.style.opacity = '';
-    setTimeout(() => { resetSlide(); sliding = false; }, 240);
-  }, 150);
+    shiftMonth(step);  // 가운데 칸을 새 달로 (옆 칸과 같은 모습이라 이어져 보임)
+    trackEl.style.transition = 'none';
+    trackEl.style.transform = '';
+    void trackEl.offsetWidth;
+    trackEl.style.transition = '';
+    sliding = false;
+  }, dur + 10);
 }
 $('#prevM').onclick = () => slideMonth(-1);
 $('#nextM').onclick = () => slideMonth(1);
@@ -1032,14 +1050,12 @@ $('#cal').addEventListener('touchmove', e => {
   if (!sw.lock){
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
     sw.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';  // 세로로 움직이면 스와이프 아님
-    if (sw.lock === 'x') weeksEl.style.transition = 'none';
+    if (sw.lock === 'x'){ renderSides(); trackEl.style.transition = 'none'; }
   }
   if (sw.lock !== 'x') return;
   e.preventDefault();
   sw.dx = dx;
-  const w = $('#cal').clientWidth;
-  weeksEl.style.transform = `translateX(${dx}px)`;
-  weeksEl.style.opacity = String(1 - Math.min(Math.abs(dx) / w, 1) * .5);
+  trackEl.style.transform = `translateX(${dx}px)`;
 }, {passive:false});
 const endSwipe = () => {
   const s = sw; sw = null;
@@ -1047,8 +1063,8 @@ const endSwipe = () => {
   const w = $('#cal').clientWidth, speed = Math.abs(s.dx) / Math.max(1, Date.now() - s.t);
   if (Math.abs(s.dx) > w * .25 || (speed > .6 && Math.abs(s.dx) > 50)) slideMonth(s.dx < 0 ? 1 : -1, true);
   else {  // 제자리로
-    weeksEl.style.transition = 'transform .2s ease-out, opacity .2s';
-    weeksEl.style.transform = ''; weeksEl.style.opacity = '';
+    trackEl.style.transition = 'transform .2s ease-out';
+    trackEl.style.transform = '';
     setTimeout(resetSlide, 220);
   }
 };
