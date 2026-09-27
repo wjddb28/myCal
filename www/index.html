@@ -2,29 +2,37 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>나의 캘린더</title>
 <style>
 :root{
   --bg:#f5f6f8; --panel:#fff; --text:#1f2328; --muted:#6b7280; --faint:#9ca3af;
   --line:#e5e7eb; --line2:#eef0f2; --hover:#f3f4f6; --out:#fafbfc;
   --accent:#4f46e5; --accent-soft:#eef2ff; --sat:#2563eb; --sun:#dc2626;
-  --shadow:0 12px 32px rgba(15,23,42,.14); --radius:10px;
+  --shadow:0 12px 32px rgba(15,23,42,.14); --radius:10px; color-scheme:light; --seg-on:#fff;
 }
-@media (prefers-color-scheme:dark){:root{
+/* 다크 테마: 설정에서 '다크'를 골랐거나, '시스템'인데 폰이 다크 모드일 때 */
+:root[data-theme="dark"]{
   --bg:#0e1014; --panel:#171a21; --text:#e6e8ec; --muted:#9aa1ad; --faint:#6b7280;
   --line:#2a2f3a; --line2:#20242d; --hover:#1f2430; --out:#13161c;
   --accent:#818cf8; --accent-soft:#252853; --sat:#60a5fa; --sun:#f87171;
-  --shadow:0 12px 32px rgba(0,0,0,.5);
+  --shadow:0 12px 32px rgba(0,0,0,.5); color-scheme:dark; --seg-on:#394052;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1014; --panel:#171a21; --text:#e6e8ec; --muted:#9aa1ad; --faint:#6b7280;
+  --line:#2a2f3a; --line2:#20242d; --hover:#1f2430; --out:#13161c;
+  --accent:#818cf8; --accent-soft:#252853; --sat:#60a5fa; --sun:#f87171;
+  --shadow:0 12px 32px rgba(0,0,0,.5); color-scheme:dark; --seg-on:#394052;
 }}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font:14px/1.45 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 [hidden]{display:none!important}
 
-.app{display:grid;grid-template-columns:260px minmax(0,1fr) auto;height:100vh}
+.app{display:grid;grid-template-columns:260px minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr);height:100vh}
 
 /* ---------- sidebar ---------- */
 .side{background:var(--panel);border-right:1px solid var(--line);padding:18px 16px;display:flex;flex-direction:column;gap:18px;overflow:auto}
@@ -74,10 +82,10 @@ button{cursor:pointer}
 .seg{display:inline-flex;background:var(--hover);border-radius:9px;padding:3px;gap:2px}
 .seg.full{display:flex}
 .seg button{flex:1;white-space:nowrap;border:0;background:none;padding:6px 10px;border-radius:7px;color:var(--muted);font-weight:600;font-size:13px}
-.seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg button.on{background:var(--seg-on);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 
 /* ---------- main ---------- */
-.main{display:flex;flex-direction:column;min-width:0;position:relative}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
 .top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
 .nav{display:flex;align-items:center;gap:2px}
 .title{border:0;background:none;font-size:20px;font-weight:700;padding:4px 10px;border-radius:8px;min-width:150px}
@@ -94,6 +102,9 @@ button{cursor:pointer}
 .res .bar{width:4px;align-self:stretch;border-radius:2px;background:var(--c);flex:none}
 .res .t{font-weight:600}
 .res .m{font-size:12px;color:var(--muted)}
+.res .dt{width:66px;flex:none;font-weight:700;font-size:13px;line-height:1.3;padding-top:1px}
+.res .dt small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.res.past{opacity:.6}
 .res mark{background:color-mix(in srgb,var(--accent) 25%,transparent);color:inherit;border-radius:3px}
 .res-head{font-size:12px;color:var(--muted);padding:4px 10px}
 
@@ -108,11 +119,11 @@ button{cursor:pointer}
 .pm button.now{outline:2px solid var(--accent);outline-offset:-2px}
 .pop-hint{font-size:11px;color:var(--faint);margin-top:10px;line-height:1.6}
 
-.cal{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--panel);user-select:none}
+.cal{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--panel);user-select:none;overflow:hidden}
 .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
 .dow div{padding:7px 8px;font-size:12px;font-weight:600;color:var(--muted)}
-.dow div:first-child{color:var(--sun)} .dow div:last-child{color:var(--sat)}
-.weeks{flex:1;display:flex;flex-direction:column;min-height:0}
+.dow .d0{color:var(--sun)} .dow .d6{color:var(--sat)}
+.weeks{flex:1;display:flex;flex-direction:column;min-height:0;will-change:transform}
 .week{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:26px repeat(var(--R),20px) 1fr;row-gap:2px;border-bottom:1px solid var(--line);overflow:hidden}
 .week:last-child{border-bottom:0}
 .cell{grid-row:1/-1;border-right:1px solid var(--line2);padding:3px 6px;cursor:pointer;min-width:0}
@@ -209,7 +220,11 @@ textarea.inp{min-height:64px;resize:vertical}
 .dchip button{border:0;background:none;color:var(--muted);padding:0 4px;font-size:13px}
 .radio{display:flex;align-items:center;gap:6px}
 
-.catrow{display:flex;gap:8px;align-items:center}
+.catrow{display:flex;gap:6px;align-items:center}
+.catrow .mv{width:30px;height:34px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--muted);flex:none;padding:0}
+.catrow .mv:disabled{opacity:.25}
+.catrow.new{animation:flash 1.2s ease 1}
+.cat-gh{font-size:12px;font-weight:700;color:var(--muted);margin:6px 0 -4px}
 .catrow input[type=color]{width:36px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--bg)}
 
 .sync-sec{border:1px solid var(--line);border-radius:12px;padding:14px}
@@ -260,6 +275,49 @@ textarea.inp{min-height:64px;resize:vertical}
   .fab{display:grid;place-items:center}
   input,select,textarea{font-size:16px!important}
 }
+/* ---------- 일정 목록 페이지 ---------- */
+.listhead{display:none;align-items:center;flex:1;min-width:0}
+.listhead .ltitle{font-size:20px;font-weight:700;padding:4px 10px;border:0;background:none}
+.page-list .listhead{display:flex}
+.page-list .nav{display:none!important}
+.page-list .cal{display:none}
+.pageseg{flex:none}
+.agenda{flex:1;display:none;flex-direction:column;min-height:0;overflow:auto;background:var(--panel);-webkit-overflow-scrolling:touch}
+.page-list .agenda{display:block}
+.ag-top{position:sticky;top:0;z-index:2;background:var(--panel);display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ag-top .seg{flex:1}
+.ag-chip{border:0;border-radius:8px;padding:7px 10px;font-size:12.5px;font-weight:700;white-space:nowrap;background:var(--hover);color:var(--muted)}
+.ag-chip.on{background:var(--muted);color:var(--panel)}
+.ag-chip.late{background:color-mix(in srgb,var(--sun) 14%,transparent);color:var(--sun)}
+.ag-chip.late.on{background:var(--sun);color:#fff}
+.ag-box{border-bottom:1px solid var(--line);padding-bottom:6px}
+.ag-box.late{background:color-mix(in srgb,var(--sun) 5%,transparent)}
+.ag-dh{font-size:12.5px;font-weight:700;color:var(--muted);padding:14px 16px 4px}
+.ag-dh.today{color:var(--accent)}
+.ag-dh.sun{color:var(--sun)} .ag-dh.sat{color:var(--sat)}
+.ag-dh.late{color:var(--sun)}
+.ag-it{display:flex;gap:12px;align-items:center;padding:9px 16px;cursor:pointer}
+.ag-it:hover,.ag-it:active{background:var(--hover)}
+.ag-it .bar{width:4px;align-self:stretch;min-height:34px;border-radius:2px;background:var(--c);flex:none}
+.ag-it .ck{width:18px;height:18px}
+.ag-it .ck.on::after{width:5px;height:9px}
+.ag-it .t{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ag-it .m{font-size:12px;color:var(--muted);margin-top:1px}
+.ag-empty{padding:4px 16px 10px;color:var(--faint);font-size:13px}
+.ag-end,.ag-more{text-align:center;color:var(--faint);font-size:12px;padding:22px 0 30px}
+.tabbar{display:none}
+@media (max-width:860px){
+  .pageseg{display:none}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar button{flex:1;border:0;background:none;padding:7px 0 6px;font-size:11px;font-weight:600;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:1px}
+  .tabbar button span{font-size:21px;line-height:1.15;filter:grayscale(1);opacity:.5}
+  .tabbar button.on{color:var(--accent)}
+  .tabbar button.on span{filter:none;opacity:1}
+  .main{padding-bottom:calc(52px + env(safe-area-inset-bottom))}
+  .cal{padding-bottom:0}
+  .fab{bottom:calc(env(safe-area-inset-bottom) + 70px)}
+  .toast{bottom:calc(env(safe-area-inset-bottom) + 70px)}
+}
 </style>
 </head>
 <body>
@@ -271,24 +329,19 @@ textarea.inp{min-height:64px;resize:vertical}
       <button class="btn" id="newTodo">☑ 할 일</button>
     </div>
     <section>
-      <h4>보기</h4>
+      <h4>캘린더에 보기</h4>
       <div class="seg full" id="kindSeg">
         <button data-v="all">전체</button><button data-v="event">일정</button><button data-v="todo">할 일</button>
       </div>
     </section>
-    <section>
+    <section class="grow">
       <h4>카테고리 <button class="link" id="manageCats">관리</button></h4>
       <div id="catList"></div>
     </section>
-    <section>
-      <h4>일정 유형</h4>
-      <ul class="legend" id="typeList"></ul>
-    </section>
-    <section class="grow">
-      <h4>다가오는 2주</h4>
-      <div id="upcoming"></div>
-    </section>
-    <button class="btn ghost full" id="openSync">🔗 구글·노션 연동 / 백업</button>
+    <div class="new-btns">
+      <button class="btn ghost" id="openSettings">⚙️ 설정</button>
+      <button class="btn ghost" id="openSync">🔗 연동 · 백업</button>
+    </div>
     <div class="kbd web-only">단축키: ← → 달 이동 · Shift+← → 년 이동 · T 오늘 · N 새 일정 · / 검색</div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -304,8 +357,10 @@ textarea.inp{min-height:64px;resize:vertical}
         <button class="icon" id="nextY" title="다음 해 (Shift+→)">»</button>
         <button class="btn sm" id="todayBtn" title="오늘 (T)">오늘</button>
       </div>
+      <div class="listhead"><button class="ltitle" id="listTitle" title="맨 위로">일정 목록</button></div>
+      <div class="seg pageseg" id="pageSeg"><button data-v="cal">📅 캘린더</button><button data-v="list">📋 목록</button></div>
       <div class="search">
-        <input id="q" placeholder="일정 검색  ·  #시험 처럼 카테고리 필터" autocomplete="off">
+        <input id="q" type="search" enterkeyhint="done" placeholder="일정 검색  ·  #시험 처럼 카테고리 필터" autocomplete="off">
         <div class="results" id="results" hidden></div>
       </div>
     </header>
@@ -314,10 +369,12 @@ textarea.inp{min-height:64px;resize:vertical}
       <div class="dow" id="dow"></div>
       <div class="weeks" id="weeks"></div>
     </div>
+    <div class="agenda" id="agenda"></div>
   </main>
 
   <aside class="day" id="day"></aside>
   <button class="fab" id="fab" aria-label="새 일정">＋</button>
+  <nav class="tabbar" id="tabbar"><button data-v="cal"><span>📅</span>캘린더</button><button data-v="list"><span>📋</span>일정 목록</button></nav>
 </div>
 
 <!-- 일정 편집 -->
@@ -393,6 +450,22 @@ textarea.inp{min-height:64px;resize:vertical}
 </div>
 
 <!-- 카테고리 관리 -->
+<div class="modal" id="setModal" hidden>
+  <div class="sheet">
+    <div class="sheet-h"><h3>⚙️ 설정</h3><button class="icon" data-close>✕</button></div>
+    <div class="sheet-b">
+      <div><span class="fl">테마</span>
+        <div class="seg full" id="setTheme"><button data-v="system">📱 시스템 설정</button><button data-v="light">☀️ 라이트</button><button data-v="dark">🌙 다크</button></div></div>
+      <div><span class="fl">한 주의 시작</span>
+        <div class="seg full" id="setWeek"><button data-v="0">일요일</button><button data-v="1">월요일</button></div></div>
+      <div><span class="fl">옆으로 밀어서 달 넘기기</span>
+        <div class="seg full" id="setSwipe"><button data-v="1">켜기</button><button data-v="0">끄기</button></div>
+        <div class="hint" style="margin-top:6px">켜 두면 달력을 화면 폭의 ¼ 이상 밀었을 때만 넘어가요. 짧게 건드리면 제자리로 돌아와요.</div></div>
+    </div>
+    <div class="sheet-f"><span class="sp"></span><button class="btn primary" data-close>완료</button></div>
+  </div>
+</div>
+
 <div class="modal" id="catModal" hidden>
   <div class="sheet">
     <div class="sheet-h"><h3>카테고리 관리</h3><button class="icon" data-close>✕</button></div>
@@ -614,11 +687,11 @@ S = load();
 
 const view = (() => {
   const t = new Date();
-  let v = {kind:'all', hiddenCats:[], hiddenTypes:[], dayOpen: innerWidth > 1100, fold:{}, showOff:{}, showDone:{}, pinned:[]};
+  let v = {kind:'all', hiddenCats:[], hiddenTypes:[], dayOpen: innerWidth > 1100, fold:{}, showOff:{}, showDone:{}, pinned:[], theme:'system', weekStart:0, swipe:true, page:'cal', listKind:'all', showLate:false, showUndated:false};
   try { v = {...v, ...JSON.parse(localStorage.getItem(VKEY) || '{}')}; } catch {}
   return {...v, y:t.getFullYear(), m:t.getMonth(), selected:fmt(t)};
 })();
-const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff, showDone:view.showDone, pinned:view.pinned})); } catch {} };
+const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff, showDone:view.showDone, pinned:view.pinned, theme:view.theme, weekStart:view.weekStart, swipe:view.swipe, page:view.page, listKind:view.listKind, showLate:view.showLate, showUndated:view.showUndated})); } catch {} };
 
 const cat = id => S.categories.find(c => c.id === id) || {id, name:'기타', color:'#64748b'};
 
@@ -684,7 +757,7 @@ function occurrences(ev, from, to){
 }
 const grouped = () => S.categories.some(c => c.listId);
 const visKey = (catId, kind) => kind === 'todo' && grouped() ? 't:' + catId : catId;
-const isVisible = ev => (view.kind === 'all' || ev.kind === view.kind) && !view.hiddenCats.includes(visKey(ev.cat, ev.kind)) && !view.hiddenTypes.includes(ev.type);
+const isVisible = ev => (view.kind === 'all' || ev.kind === view.kind) && !view.hiddenCats.includes(visKey(ev.cat, ev.kind));
 const visibleOccs = (from, to) => allEvents().filter(isVisible).flatMap(e => occurrences(e, from, to));
 const isDone = (ev, d) => (ev.doneDates || []).includes(d);
 function cmpOcc(a, b){
@@ -719,13 +792,15 @@ function describe(ev){
    달력 렌더링
    ========================================================= */
 const weeksEl = $('#weeks');
-$('#dow').innerHTML = WD.map(w => `<div>${w}</div>`).join('');
+const weekOrder = () => Array.from({length:7}, (_, i) => (i + (+view.weekStart || 0)) % 7);  // 요일 번호(0=일) 순서
+const renderDow = () => { $('#dow').innerHTML = weekOrder().map(i => `<div class="d${i}">${WD[i]}</div>`).join(''); };
 
 function monthRange(y, m){
+  const ws = +view.weekStart || 0, off = d => (d.getDay() - ws + 7) % 7;
   const first = new Date(y, m, 1);
-  const start = new Date(first); start.setDate(1 - first.getDay());
+  const start = new Date(first); start.setDate(1 - off(first));
   const last = new Date(y, m+1, 0);
-  const end = new Date(last); end.setDate(last.getDate() + (6 - last.getDay()));
+  const end = new Date(last); end.setDate(last.getDate() + (6 - off(last)));
   return {from: fmt(start), to: fmt(end), weeks: Math.round((end - start)/864e5 + 1) / 7};
 }
 
@@ -777,6 +852,7 @@ function renderCalendar(){
   const {y, m} = view;
   $('#title').textContent = `${y}년 ${m+1}월`;
   const {from, to, weeks} = monthRange(y, m);
+  renderDow();
   const occs = visibleOccs(from, to);
   const h = weeksEl.clientHeight || 600;
   const R = Math.max(2, Math.min(12, Math.floor((h / weeks - 30) / 22)));
@@ -791,7 +867,7 @@ function renderCalendar(){
       const ds = addDays(ws, d), dt = parse(ds), hol = holiday(ds);
       const cls = ['cell'];
       if (dt.getMonth() !== m) cls.push('out');
-      if (d === 0) cls.push('sun'); if (d === 6) cls.push('sat');
+      if (dt.getDay() === 0) cls.push('sun'); if (dt.getDay() === 6) cls.push('sat');
       if (hol) cls.push('hol');
       if (ds === t) cls.push('today');
       if (ds === view.selected && view.dayOpen) cls.push('sel');
@@ -833,37 +909,7 @@ function renderSide(){
       '</ul>';
   }
   $('#catList').innerHTML = cg;
-  $('#typeList').innerHTML = Object.entries(TYPES).map(([k, t]) => {
-    const desc = {single:'하루 일정', multi:'여러 날짜 선택', recurring:'매일·매주·매월·매년', period:'여행 같은 연속 기간'}[k];
-    return `<li data-type="${k}" class="${view.hiddenTypes.includes(k) ? 'off' : ''}"><span class="ty">${t.icon}</span><span class="nm">${t.label} <span class="ct">· ${desc}</span></span></li>`;
-  }).join('');
-  // 다가오는 2주 + 밀린 할 일
-  const t = todayStr();
-  const late = allEvents().filter(e => e.kind === 'todo' && isVisible(e))
-    .flatMap(e => occurrences(e, addDays(t,-30), addDays(t,-1)))
-    .filter(o => o.end < t && !isDone(o.ev, o.start));
-  const up = visibleOccs(t, addDays(t, 13)).filter(o => !(o.ev.kind === 'todo' && isDone(o.ev, o.start)));
-  const groups = {};
-  up.forEach(o => { const k = o.start < t ? t : o.start; (groups[k] = groups[k] || []).push(o); });
-  let html = '';
-  if (late.length) html += `<div class="up-day late">밀린 할 일 ${late.length}개</div>` + late.slice(0,5).map(upItem).join('');
-  const days = Object.keys(groups).sort();
-  let count = 0;
-  for (const d of days){
-    if (count >= 14) break;
-    const label = d === t ? '오늘' : d === addDays(t,1) ? '내일' : fullDate(d).slice(5);
-    html += `<div class="up-day">${label}</div>` + groups[d].sort(cmpOcc).map(upItem).join('');
-    count += groups[d].length;
-  }
-  if (PH.undated.length) html += `<div class="up-day">날짜 없는 미리알림 ${PH.undated.length}개</div>` + PH.undated.slice(0, 8).map(ev =>
-    `<div class="up-item" style="--c:${cat(ev.cat).color}"><span class="ck" data-toggle="${ev.id}|"></span><span class="tt">${esc(ev.title)}</span></div>`).join('');
-  $('#upcoming').innerHTML = html || '<div class="empty">예정된 일정이 없어요</div>';
 }
-function upItem(o){
-  const ev = o.ev, c = cat(ev.cat).color;
-  return `<div class="up-item" style="--c:${c}" data-jump="${o.start < todayStr() && ev.type==='period' ? todayStr() : o.start}" data-id="${ev.id}"><span class="dot ${ev.kind}"></span><span class="tt">${esc(ev.title)}</span><span class="tm">${ev.allDay ? (ev.type==='period' ? `~${md(o.end)}` : '') : ev.startTime}</span></div>`;
-}
-
 /* =========================================================
    날짜 상세 패널
    ========================================================= */
@@ -903,7 +949,7 @@ function renderDay(){
     </div>`;
 }
 
-function render(){ renderCalendar(); renderSide(); renderDay(); }
+function render(){ renderCalendar(); renderSide(); renderDay(); if (view.page === 'list') renderAgenda(); }
 
 /* =========================================================
    이동
@@ -917,15 +963,38 @@ function go(y, m){
 const shiftMonth = n => go(view.y, view.m + n);
 function goToday(){ const t = new Date(); view.selected = fmt(t); go(t.getFullYear(), t.getMonth()); }
 function jumpTo(ds, id){
+  if (view.page === 'list') setPage('cal');
   const d = parse(ds);
   view.selected = ds; view.dayOpen = true; saveView();
   go(d.getFullYear(), d.getMonth());
   if (id) requestAnimationFrame(() => $$(`[data-id="${id}"]`).forEach(el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }));
 }
-$('#prevM').onclick = () => shiftMonth(-1);
-$('#nextM').onclick = () => shiftMonth(1);
-$('#prevY').onclick = () => shiftMonth(-12);
-$('#nextY').onclick = () => shiftMonth(12);
+/* 달력을 옆으로 미끄러뜨리며 달 이동 (dir: -1 이전, 1 다음. step: 이동할 개월 수) */
+let sliding = false;
+const resetSlide = () => { weeksEl.style.transition = ''; weeksEl.style.transform = ''; weeksEl.style.opacity = ''; };
+function slideMonth(step, fromSwipe){
+  const dir = Math.sign(step);
+  if (sliding) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ resetSlide(); shiftMonth(step); return; }
+  sliding = true;
+  const w = $('#cal').clientWidth;
+  weeksEl.style.transition = 'transform .15s ease-in, opacity .15s ease-in';
+  weeksEl.style.transform = `translateX(${-dir * w * (fromSwipe ? 1 : .3)}px)`;
+  weeksEl.style.opacity = '0';
+  setTimeout(() => {
+    shiftMonth(step);
+    weeksEl.style.transition = 'none';
+    weeksEl.style.transform = `translateX(${dir * w * .3}px)`;
+    void weeksEl.offsetWidth;
+    weeksEl.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s';
+    weeksEl.style.transform = ''; weeksEl.style.opacity = '';
+    setTimeout(() => { resetSlide(); sliding = false; }, 240);
+  }, 150);
+}
+$('#prevM').onclick = () => slideMonth(-1);
+$('#nextM').onclick = () => slideMonth(1);
+$('#prevY').onclick = () => slideMonth(-12);
+$('#nextY').onclick = () => slideMonth(12);
 $('#todayBtn').onclick = goToday;
 
 // 년·월 선택 팝오버
@@ -951,15 +1020,40 @@ $('#picker').addEventListener('click', e => {
 $('#picker').addEventListener('change', e => { if (e.target.id === 'pyIn'){ const v = +e.target.value; if (v > 0 && v < 10000){ pickY = v; renderPicker(); } } });
 document.addEventListener('click', () => { $('#picker').hidden = true; });
 
-// 스와이프 (모바일)
-let tx = null;
-$('#cal').addEventListener('touchstart', e => { tx = [e.touches[0].clientX, e.touches[0].clientY]; }, {passive:true});
-$('#cal').addEventListener('touchend', e => {
-  if (!tx) return;
-  const dx = e.changedTouches[0].clientX - tx[0], dy = e.changedTouches[0].clientY - tx[1];
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) shiftMonth(dx < 0 ? 1 : -1);
-  tx = null;
+// 스와이프 (모바일): 달력이 손가락을 따라오고, 충분히 밀었을 때만 달이 넘어감
+let sw = null;
+$('#cal').addEventListener('touchstart', e => {
+  if (!view.swipe || sliding || e.touches.length !== 1) return;
+  sw = {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), dx:0, lock:null};
 }, {passive:true});
+$('#cal').addEventListener('touchmove', e => {
+  if (!sw) return;
+  const dx = e.touches[0].clientX - sw.x, dy = e.touches[0].clientY - sw.y;
+  if (!sw.lock){
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+    sw.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';  // 세로로 움직이면 스와이프 아님
+    if (sw.lock === 'x') weeksEl.style.transition = 'none';
+  }
+  if (sw.lock !== 'x') return;
+  e.preventDefault();
+  sw.dx = dx;
+  const w = $('#cal').clientWidth;
+  weeksEl.style.transform = `translateX(${dx}px)`;
+  weeksEl.style.opacity = String(1 - Math.min(Math.abs(dx) / w, 1) * .5);
+}, {passive:false});
+const endSwipe = () => {
+  const s = sw; sw = null;
+  if (!s || s.lock !== 'x') return;
+  const w = $('#cal').clientWidth, speed = Math.abs(s.dx) / Math.max(1, Date.now() - s.t);
+  if (Math.abs(s.dx) > w * .25 || (speed > .6 && Math.abs(s.dx) > 50)) slideMonth(s.dx < 0 ? 1 : -1, true);
+  else {  // 제자리로
+    weeksEl.style.transition = 'transform .2s ease-out, opacity .2s';
+    weeksEl.style.transform = ''; weeksEl.style.opacity = '';
+    setTimeout(resetSlide, 220);
+  }
+};
+$('#cal').addEventListener('touchend', endSwipe);
+$('#cal').addEventListener('touchcancel', endSwipe);
 
 // 키보드
 document.addEventListener('keydown', e => {
@@ -973,8 +1067,8 @@ document.addEventListener('keydown', e => {
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); $('#q').focus(); return; }
   if (typing || $$('.modal').some(m => !m.hidden) || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); shiftMonth(e.shiftKey ? -12 : -1); }
-  else if (e.key === 'ArrowRight' || e.key === 'PageDown'){ e.preventDefault(); shiftMonth(e.shiftKey ? 12 : 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); slideMonth(e.shiftKey ? -12 : -1); }
+  else if (e.key === 'ArrowRight' || e.key === 'PageDown'){ e.preventDefault(); slideMonth(e.shiftKey ? 12 : 1); }
   else if (e.key === 't' || e.key === 'T') goToday();
   else if (e.key === 'n' || e.key === 'N') openEditor({kind:'event', date:view.selected});
   else if (e.key === '/'){ e.preventDefault(); $('#q').focus(); }
@@ -1091,14 +1185,6 @@ $('#catList').onclick = e => {
   h.includes(id) ? h.splice(h.indexOf(id), 1) : h.push(id);
   saveView(); render();
 };
-$('#typeList').onclick = e => {
-  const li = e.target.closest('li'); if (!li) return;
-  const id = li.dataset.type, h = view.hiddenTypes;
-  h.includes(id) ? h.splice(h.indexOf(id), 1) : h.push(id);
-  saveView(); render();
-};
-$('#upcoming').addEventListener('click', e => { const tg = e.target.closest('[data-toggle]'); if (tg){ e.stopPropagation(); const [id, d] = tg.dataset.toggle.split('|'); toggleDone(id, d); } }, true);
-$('#upcoming').onclick = e => { const it = e.target.closest('[data-jump]'); if (it){ jumpTo(it.dataset.jump, it.dataset.id); closeMenu(); } };
 $('#newEvent').onclick = () => { closeMenu(); openEditor({kind:'event', date:view.selected}); };
 $('#newTodo').onclick = () => { closeMenu(); openEditor({kind:'todo', date:view.selected}); };
 const closeMenu = () => { $('#side').classList.remove('open'); $('#scrim').classList.remove('on'); };
@@ -1159,7 +1245,7 @@ function renderWd(){
 }
 function renderMP(){
   const y = ED.mpY, m = ED.mpM, {from} = monthRange(y, m), t = todayStr();
-  let cells = WD.map(w => `<span class="w">${w}</span>`).join('');
+  let cells = weekOrder().map(i => `<span class="w">${WD[i]}</span>`).join('');
   const weeks = monthRange(y, m).weeks;
   for (let i = 0; i < weeks * 7; i++){
     const ds = addDays(from, i), dt = parse(ds);
@@ -1330,11 +1416,14 @@ function toast(msg, action, fn){
 /* =========================================================
    카테고리 관리
    ========================================================= */
+let justAdded = null;
 function renderCatEdit(){
-  $('#catEdit').innerHTML = S.categories.map(c => `<div class="catrow" data-id="${c.id}">
+  const row = (c, g, i, n) => `<div class="catrow ${c.id === justAdded ? 'new' : ''}" data-id="${c.id}">
+    <button class="mv" data-mv="-1" data-g="${g}" ${i === 0 ? 'disabled' : ''} title="위로">▲</button><button class="mv" data-mv="1" data-g="${g}" ${i === n - 1 ? 'disabled' : ''} title="아래로">▼</button>
     <input type="color" value="${c.color}" data-f="color"><input class="inp" value="${esc(c.name)}" data-f="name">
-    ${c.calId || c.listId ? '<span title="아이폰과 연결됨">📱</span>' : ''}<button class="icon" data-del title="삭제">🗑</button></div>`).join('') +
-    '<div class="hint">색을 바꾸면 달력의 모든 일정에 바로 반영돼요. 카테고리를 지우면 해당 일정은 “기타”로 옮겨져요.</div>';
+    ${c.calId || c.listId ? '<span title="아이폰과 연결됨">📱</span>' : ''}<button class="icon" data-del title="삭제">🗑</button></div>`;
+  $('#catEdit').innerHTML = catGroups().map(g => (g.title ? `<div class="cat-gh">${g.title}</div>` : '') + g.cats.map((c, i) => row(c, g.key, i, g.cats.length)).join('')).join('') +
+    '<div class="hint">▲▼로 순서를 바꾸면 메뉴와 일정 추가 창에 같은 순서로 보여요. 색을 바꾸면 모든 일정에 바로 반영돼요. 카테고리를 지우면 해당 일정은 “기타”로 옮겨져요.</div>';
 }
 $('#manageCats').onclick = () => { renderCatEdit(); $('#catModal').hidden = false; };
 $('#catEdit').addEventListener('input', e => {
@@ -1343,6 +1432,18 @@ $('#catEdit').addEventListener('input', e => {
   if (IS_NATIVE && c.calId && !c.calRO){ clearTimeout(c._t); c._t = setTimeout(() => Cal.modifyCalendar({id:c.calId, title:c.name, color:c.color}).catch(() => {}), 600); }
 });
 $('#catEdit').addEventListener('click', e => {
+  const mv = e.target.closest('[data-mv]');
+  if (mv){
+    // 같은 묶음 안에서 바로 위/아래 카테고리와 자리 바꾸기
+    const g = catGroups().find(x => x.key === mv.dataset.g), id = mv.closest('.catrow').dataset.id;
+    const i = g.cats.findIndex(c => c.id === id), other = g.cats[i + +mv.dataset.mv];
+    if (!other) return;
+    const a = S.categories.findIndex(c => c.id === id), b = S.categories.indexOf(other);
+    [S.categories[a], S.categories[b]] = [S.categories[b], S.categories[a]];
+    justAdded = null; save(); renderCatEdit(); render();
+    $(`#catEdit .catrow[data-id="${id}"] [data-mv="${mv.dataset.mv}"]`)?.focus();
+    return;
+  }
   if (!e.target.closest('[data-del]')) return;
   if (S.categories.length <= 1) return toast('카테고리는 하나 이상 필요해요');
   const id = e.target.closest('.catrow').dataset.id;
@@ -1355,15 +1456,17 @@ $('#catEdit').addEventListener('click', e => {
 });
 $('#addCat').onclick = () => {
   const colors = ['#f97316','#eab308','#ec4899','#14b8a6','#8b5cf6','#84cc16','#0ea5e9'];
-  S.categories.push({id:'c-' + uid(), name:'새 카테고리', color:colors[S.categories.length % colors.length], user:true});
-  save(); renderCatEdit(); render();
-  const inputs = $$('#catEdit .inp'); inputs[inputs.length-1].select();
+  const c = {id:'c-' + uid(), name:'새 카테고리', color:colors[S.categories.length % colors.length], user:true};
+  S.categories.unshift(c);  // 맨 위에 추가
+  justAdded = c.id; save(); renderCatEdit(); render();
+  $('#catEdit').closest('.sheet').scrollTop = 0;
+  $(`#catEdit .catrow[data-id="${c.id}"] .inp`)?.select();
 };
 
 /* =========================================================
    검색
    ========================================================= */
-let resSel = 0, resList = [];
+let resSel = -1, resList = [], resNav = false;
 function nextOccDate(ev){
   const t = todayStr();
   if (ev.type === 'period') return ev.endDate >= t ? (ev.date > t ? ev.date : t) : ev.date;
@@ -1386,21 +1489,28 @@ function doSearch(){
   const m = q.match(/#(\S+)/);
   if (m){ catQ = m[1].toLowerCase(); q = q.replace(m[0], '').trim(); }
   const ql = q.toLowerCase(), t = todayStr();
-  resList = allEvents().filter(ev => {
+  const matched = allEvents().filter(ev => {
     const c = cat(ev.cat);
     if (catQ && !c.name.toLowerCase().includes(catQ) && !(catQ === '할일' && ev.kind === 'todo') && !(catQ === '일정' && ev.kind === 'event')) return false;
     if (!ql) return true;
     return [ev.title, ev.memo, c.name, TYPES[ev.type].label, ev.kind === 'todo' ? '할 일 할일' : '일정'].join(' ').toLowerCase().includes(ql);
-  }).map(ev => ({ev, d:nextOccDate(ev)}))
+  });
+  // 다중 일정은 날짜마다 한 줄씩, 나머지는 다음(또는 마지막) 날짜로 한 줄
+  resList = matched.flatMap(ev => ev.type === 'multi'
+      ? ev.dates.filter(d => !(ev.exdates || []).includes(d)).map(d => ({ev, d}))
+      : [{ev, d:nextOccDate(ev)}])
     .sort((a, b) => (a.d >= t) === (b.d >= t) ? (a.d >= t ? a.d.localeCompare(b.d) : b.d.localeCompare(a.d)) : (a.d >= t ? -1 : 1))
-    .slice(0, 60);
-  resSel = 0;
+    .slice(0, 150);
+  resSel = -1; resNav = false;
+  const dayLabel = d => d === t ? '오늘' : d === addDays(t, 1) ? '내일' : d.slice(0, 4) !== t.slice(0, 4) ? d.slice(0, 4) : '';
   box.innerHTML = resList.length
-    ? `<div class="res-head">${resList.length}개 결과 · ↑↓ 선택, Enter 이동</div>` + resList.map(({ev, d}, i) => {
+    ? `<div class="res-head">${resList.length}개 결과${IS_NATIVE ? '' : ' · ↑↓ 선택, Enter 이동'}</div>` + resList.map(({ev, d}, i) => {
         const c = cat(ev.cat);
-        return `<div class="res ${i === 0 ? 'sel' : ''}" data-i="${i}" style="--c:${c.color}"><span class="bar"></span><div style="min-width:0">
+        const extra = ev.type === 'recurring' ? ` · ↻ ${ruleText(ev)}` : ev.type === 'period' ? ` · ~${md(ev.endDate)}` : '';
+        return `<div class="res ${d < t ? 'past' : ''}" data-i="${i}" style="--c:${c.color}"><span class="bar"></span>
+          <div class="dt">${md(d)} (${WD[parse(d).getDay()]})<small>${dayLabel(d)}</small></div><div style="min-width:0">
           <div class="t">${ev.kind === 'todo' ? '☑ ' : ''}${hl(ev.title, q)}</div>
-          <div class="m">${esc(c.name)}${ev.type === 'multi' ? '' : ` · ${TYPES[ev.type].icon} ${TYPES[ev.type].label}`} · ${esc(describe(ev))}${ev.allDay ? '' : ' · ' + ev.startTime}${d < t ? ' · 지난 일정' : ''}</div>
+          <div class="m">${esc(c.name)} · ${timeText(ev)}${esc(extra)}</div>
           ${ev.memo && ql && ev.memo.toLowerCase().includes(ql) ? `<div class="m">${hl(ev.memo, q)}</div>` : ''}</div></div>`;
       }).join('')
     : '<div class="empty" style="padding:10px">검색 결과가 없어요</div>';
@@ -1416,13 +1526,20 @@ $('#q').addEventListener('focus', () => { if ($('#q').value.trim()) doSearch(); 
 $('#q').addEventListener('keydown', e => {
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
     e.preventDefault(); if (!resList.length) return;
+    resNav = true;
     resSel = (resSel + (e.key === 'ArrowDown' ? 1 : -1) + resList.length) % resList.length;
     $$('.res').forEach((el, i) => el.classList.toggle('sel', i === resSel));
     $$('.res')[resSel]?.scrollIntoView({block:'nearest'});
-  } else if (e.key === 'Enter'){ e.preventDefault(); pickResult(resSel); }
+  } else if (e.key === 'Enter'){
+    e.preventDefault();
+    if (resNav && resSel >= 0) pickResult(resSel);  // 화살표로 고른 경우(PC)만 바로 이동
+    else $('#q').blur();                           // 그 외엔 키패드만 내리고 결과는 그대로
+  }
 });
 $('#results').addEventListener('mousedown', e => { const r = e.target.closest('.res'); if (r){ e.preventDefault(); pickResult(+r.dataset.i); } });
-$('#q').addEventListener('blur', () => setTimeout(() => { $('#results').hidden = true; }, 120));
+// 결과 목록은 검색창·결과 밖을 누를 때 닫힘 (키패드를 내려도 유지)
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')) $('#results').hidden = true; });
+$('#q').addEventListener('search', () => { if (!$('#q').value) $('#results').hidden = true; });
 
 /* =========================================================
    ICS 내보내기 / 가져오기
@@ -2085,12 +2202,25 @@ async function phoneLoadMeta(){
     Object.assign(c, {listId:l.id, name:l.title || c.name || '미리알림'});
     if (!c.calId) c.color = col(l.color);
   }
-  S.categories = S.categories.filter(c => c.calId || c.listId || c.user || S.events.some(e => e.cat === c.id));
-  // 아이폰에서 지워진 캘린더/목록은 연결만 끊음
+  // 아이폰에서 없어진 캘린더/목록(예: 구글 계정 연결 해제) → 앱에서도 카테고리와 그 일정을 정리
+  // (목록을 못 읽은 경우 실수로 지우지 않도록, 하나 이상 읽혔을 때만)
+  const goneCal = c => c.calId && PH.calendars.length && !PH.calendars.some(x => x.id === c.calId);
+  const goneList = c => c.listId && PH.perm.rem === 'granted' && PH.lists.length && !PH.lists.some(x => x.id === c.listId);
+  const removed = new Set();
   S.categories.forEach(c => {
-    if (c.calId && !PH.calendars.some(x => x.id === c.calId)){ delete c.calId; delete c.calRO; }
-    if (c.listId && PH.perm.rem === 'granted' && !PH.lists.some(x => x.id === c.listId)) delete c.listId;
+    const gc = goneCal(c), gl = goneList(c);
+    if (!gc && !gl) return;
+    S.events = S.events.filter(e => !(e.cat === c.id && ((gc && e.nat?.mode === 'event') || (gl && e.nat?.mode === 'reminder'))));
+    if (gc){ delete c.calId; delete c.calRO; }
+    if (gl) delete c.listId;
+    if (!c.calId && !c.listId && !c.user) removed.add(c.id);
   });
+  S.categories = S.categories.filter(c => !removed.has(c.id) && (c.calId || c.listId || c.user || S.events.some(e => e.cat === c.id)));
+  if (removed.size){
+    view.pinned = view.pinned.filter(id => !removed.has(id));
+    view.hiddenCats = view.hiddenCats.filter(k => !removed.has(k.replace(/^t:/, '')));
+    saveView();
+  }
   save();
 }
 const catOfCal = id => S.categories.find(x => x.calId === id)?.id || 'c-etc';
@@ -2259,8 +2389,132 @@ async function phoneInit(){
 }
 $('#phoneReload').onclick = async () => { await phoneLoadMeta().catch(() => {}); await phoneLoad(true); phoneStatusText(); toast('아이폰에서 다시 불러왔어요'); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && IS_NATIVE) phoneLoad(true); });  // 캘린더 앱에서 돌아오면 새로고침
-$('#fab').onclick = () => openEditor({kind:'event', date:view.selected});
+$('#fab').onclick = () => view.page === 'list'
+  ? openEditor({kind:view.listKind === 'todo' ? 'todo' : 'event', date:todayStr()})
+  : openEditor({kind:'event', date:view.selected});
 
+/* =========================================================
+   일정 목록 페이지: 오늘부터 날짜별로, 스크롤하면 이어서 (최대 2년)
+   ========================================================= */
+const AG = {days:0}, AG_STEP = 45, AG_MAX = 730;
+const agVisible = e => (view.listKind === 'all' || e.kind === view.listKind) && !view.hiddenCats.includes(visKey(e.cat, e.kind));
+function lateTodos(){
+  if (view.listKind === 'event') return [];
+  const t = todayStr();
+  return allEvents().filter(e => e.kind === 'todo' && agVisible(e))
+    .flatMap(e => occurrences(e, addDays(t, -365), addDays(t, -1)))
+    .filter(o => o.end < t && !isDone(o.ev, o.start))
+    .sort((a, b) => a.start.localeCompare(b.start));
+}
+function agRow(o, withDate){
+  const ev = o.ev, c = cat(ev.cat), todo = ev.kind === 'todo';
+  const bits = [];
+  if (withDate) bits.push(`${md(o.start)} (${WD[parse(o.start).getDay()]})`);
+  if (!(todo && ev.allDay)) bits.push(timeText(ev));
+  if (ev.type === 'period' && o.end) bits.push(`~${md(o.end)}`);
+  bits.push(esc(c.name));
+  const rep = ev.type === 'recurring' || ev.phone?.series ? ' <span class="m">↻</span>' : '';
+  return `<div class="ag-it" style="--c:${c.color}" data-id="${ev.id}" data-date="${o.start || ''}">` +
+    (todo ? `<span class="ck" data-toggle="${ev.id}|${o.start || ''}"></span>` : '<span class="bar"></span>') +
+    `<div style="flex:1;min-width:0"><div class="t">${esc(ev.title)}${rep}</div><div class="m">${bits.join(' · ')}</div></div></div>`;
+}
+function renderAgenda(reset){
+  const el = $('#agenda'), t = todayStr(), y = parse(t).getFullYear();
+  if (reset || !AG.days) AG.days = AG_STEP;
+  const to = addDays(t, AG.days - 1);
+  const groups = {};
+  allEvents().filter(agVisible).flatMap(e => occurrences(e, t, to))
+    .filter(o => !(o.ev.kind === 'todo' && isDone(o.ev, o.start)))
+    .forEach(o => { const k = o.start < t ? t : o.start; (groups[k] = groups[k] || []).push(o); });  // 진행 중인 기간 일정은 오늘에
+  const late = lateTodos();
+  const und = view.listKind === 'event' ? [] : PH.undated.filter(e => !view.hiddenCats.includes(visKey(e.cat, 'todo')));
+  let h = `<div class="ag-top"><div class="seg" id="agKind">` +
+    [['all', '전체'], ['event', '일정'], ['todo', '할 일']].map(([v, l]) => `<button data-v="${v}" class="${view.listKind === v ? 'on' : ''}">${l}</button>`).join('') + '</div>' +
+    (late.length ? `<button class="ag-chip late ${view.showLate ? 'on' : ''}" data-late>밀린 할 일 ${late.length}</button>` : '') +
+    (und.length ? `<button class="ag-chip ${view.showUndated ? 'on' : ''}" data-undated>날짜 없음 ${und.length}</button>` : '') + '</div>';
+  if (late.length && view.showLate) h += `<div class="ag-box late"><div class="ag-dh late">밀린 할 일 ${late.length}</div>${late.map(o => agRow(o, true)).join('')}</div>`;
+  if (und.length && view.showUndated) h += `<div class="ag-box"><div class="ag-dh">날짜 없는 할 일 ${und.length}</div>${und.map(ev => agRow({ev, start:null, end:null}, false)).join('')}</div>`;
+  for (let i = 0; i < AG.days; i++){
+    const d = addDays(t, i), items = groups[d];
+    if (!items && d !== t) continue;  // 오늘은 비어 있어도 표시
+    const dt = parse(d), hol = holiday(d);
+    const label = d === t ? '오늘 · ' : d === addDays(t, 1) ? '내일 · ' : '';
+    const cls = d === t ? 'today' : (dt.getDay() === 0 || hol) ? 'sun' : dt.getDay() === 6 ? 'sat' : '';
+    h += `<div class="ag-dh ${cls}">${label}${dt.getMonth() + 1}/${dt.getDate()} (${WD[dt.getDay()]})${dt.getFullYear() !== y ? ' · ' + dt.getFullYear() : ''}${hol ? ' · ' + hol : ''}</div>` +
+      (items ? items.sort(cmpOcc).map(o => agRow(o, false)).join('') : `<div class="ag-empty">${view.listKind === 'todo' ? '할 일 없음' : '일정 없음'}</div>`);
+  }
+  h += AG.days < AG_MAX ? '<div class="ag-more" id="agMore">불러오는 중…</div>' : '<div class="ag-end">2년 뒤까지 모두 보여드렸어요</div>';
+  const top = el.scrollTop;
+  el.innerHTML = h;
+  el.scrollTop = top;
+  // 목록이 화면을 다 채우지 못하면 바로 다음 기간을 이어 붙임
+  if (AG.days < AG_MAX && el.clientHeight && el.scrollHeight < el.clientHeight + 800) setTimeout(agLoadMore, 0);
+}
+function agLoadMore(){
+  if (view.page !== 'list' || AG.days >= AG_MAX) return;
+  AG.days = Math.min(AG_MAX, AG.days + AG_STEP);
+  renderAgenda();
+}
+// 맨 아래에 가까워지면 다음 기간을 이어 붙임
+$('#agenda').addEventListener('scroll', () => {
+  const el = $('#agenda');
+  if (el.scrollTop + el.clientHeight > el.scrollHeight - 800) agLoadMore();
+}, {passive:true});
+$('#agenda').addEventListener('click', e => {
+  const k = e.target.closest('#agKind button');
+  if (k){ view.listKind = k.dataset.v; saveView(); renderAgenda(true); return; }
+  if (e.target.closest('[data-late]')){ view.showLate = !view.showLate; saveView(); renderAgenda(); if (view.showLate) $('#agenda').scrollTop = 0; return; }
+  if (e.target.closest('[data-undated]')){ view.showUndated = !view.showUndated; saveView(); renderAgenda(); if (view.showUndated) $('#agenda').scrollTop = 0; return; }
+  const tg = e.target.closest('[data-toggle]');
+  if (tg){ const [id, d] = tg.dataset.toggle.split('|'); toggleDone(id, d); return; }
+  const it = e.target.closest('.ag-it');
+  if (it && it.dataset.date) openEditor({id:it.dataset.id}, it.dataset.date);
+});
+$('#listTitle').onclick = () => { $('#agenda').scrollTo({top:0, behavior:'smooth'}); };
+
+/* 캘린더 ↔ 일정 목록 전환 (폰: 아래 탭, PC: 헤더 버튼) */
+function setPage(p){
+  view.page = p === 'list' ? 'list' : 'cal';
+  document.body.classList.toggle('page-list', view.page === 'list');
+  $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.v === view.page));
+  setSeg('#pageSeg', view.page);
+  saveView();
+  $('#results').hidden = true;
+  if (view.page === 'list'){
+    // 아이폰 앱은 보고 있는 달 기준으로 일정을 읽으므로, 목록은 오늘 기준으로 맞춤
+    const now = new Date();
+    if (IS_NATIVE && (view.y !== now.getFullYear() || view.m !== now.getMonth())){ view.y = now.getFullYear(); view.m = now.getMonth(); phoneLoad(); }
+    renderAgenda(true);
+    $('#agenda').scrollTop = 0;
+  } else renderCalendar();
+}
+$('#tabbar').onclick = e => { const b = e.target.closest('button'); if (b) setPage(b.dataset.v); };
+$('#pageSeg').onclick = e => { const b = e.target.closest('button'); if (b) setPage(b.dataset.v); };
+
+/* =========================================================
+   설정: 테마 · 주 시작 요일 · 스와이프
+   ========================================================= */
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){
+  const t = view.theme || 'system';
+  if (t === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  // 아이폰 상단 시계·배터리 글자색도 테마에 맞춤 (DARK = 밝은 글자)
+  const dark = t === 'dark' || (t === 'system' && darkMQ.matches);
+  CAP?.Plugins?.StatusBar?.setStyle?.({style:dark ? 'DARK' : 'LIGHT'}).catch?.(() => {});
+}
+darkMQ.addEventListener?.('change', applyTheme);
+function renderSettings(){
+  setSeg('#setTheme', view.theme || 'system');
+  setSeg('#setWeek', String(+view.weekStart || 0));
+  setSeg('#setSwipe', view.swipe === false ? '0' : '1');
+}
+$('#openSettings').onclick = () => { closeMenu(); renderSettings(); $('#setModal').hidden = false; };
+$('#setTheme').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.theme = b.dataset.v; saveView(); applyTheme(); renderSettings(); };
+$('#setWeek').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.weekStart = +b.dataset.v; saveView(); renderSettings(); render(); };
+$('#setSwipe').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.swipe = b.dataset.v === '1'; saveView(); renderSettings(); };
+
+applyTheme();
+setPage(view.page);
 render();
 if (IS_NATIVE) phoneInit();
 </script>
