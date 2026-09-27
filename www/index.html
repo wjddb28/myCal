@@ -26,7 +26,8 @@
 }}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}  /* 아이폰 탭 회색 음영 끄기 */
+/* 마우스 올림(hover) 효과는 마우스가 있는 기기에서만. 아이폰은 탭한 뒤에도 hover가 남아 회색 칸이 됨 */
 body{background:var(--bg);color:var(--text);font:14px/1.45 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -41,7 +42,7 @@ button{cursor:pointer}
 .new-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
 .legend li{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;user-select:none}
-.legend li:hover{background:var(--hover)}
+@media (hover:hover){.legend li:hover{background:var(--hover)}}
 .legend li.off{opacity:.4}
 .legend li.off .nm{text-decoration:line-through}
 .legend .sw{width:12px;height:12px;border-radius:4px;background:var(--c);flex:none}
@@ -60,7 +61,7 @@ button{cursor:pointer}
 .up-day{font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
 .up-day.late{color:var(--sun)}
 .up-item{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px}
-.up-item:hover{background:var(--hover)}
+@media (hover:hover){.up-item:hover{background:var(--hover)}}
 .up-item .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
 .up-item .dot.todo{border-radius:2px;background:none;border:2px solid var(--c);width:10px;height:10px}
 .up-item .tt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -69,16 +70,16 @@ button{cursor:pointer}
 
 /* ---------- buttons ---------- */
 .btn{border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:8px;font-weight:600;white-space:nowrap}
-.btn:hover{background:var(--hover)}
+@media (hover:hover){.btn:hover{background:var(--hover)}}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{filter:brightness(1.08)}
+@media (hover:hover){.btn.primary:hover{filter:brightness(1.08)}}
 .btn.danger{color:var(--sun)}
 .btn.sm{padding:5px 10px;font-size:13px}
 .btn.full{width:100%}
 .btn.ghost{background:none}
 .link{background:none;border:0;color:var(--accent);font-size:12px;padding:0}
 .icon{border:0;background:none;width:34px;height:34px;border-radius:8px;font-size:18px;display:grid;place-items:center;color:var(--muted)}
-.icon:hover{background:var(--hover);color:var(--text)}
+@media (hover:hover){.icon:hover{background:var(--hover);color:var(--text)}}
 .seg{display:inline-flex;background:var(--hover);border-radius:9px;padding:3px;gap:2px}
 .seg.full{display:flex}
 .seg button{flex:1;white-space:nowrap;border:0;background:none;padding:6px 10px;border-radius:7px;color:var(--muted);font-weight:600;font-size:13px}
@@ -89,7 +90,7 @@ button{cursor:pointer}
 .top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
 .nav{display:flex;align-items:center;gap:2px}
 .title{border:0;background:none;font-size:20px;font-weight:700;padding:4px 10px;border-radius:8px;min-width:150px}
-.title:hover{background:var(--hover)}
+@media (hover:hover){.title:hover{background:var(--hover)}}
 .title .car{font-size:12px;color:var(--muted);margin-left:2px}
 #todayBtn{margin-left:8px}
 .search{margin-left:auto;position:relative;width:min(340px,40vw)}
@@ -98,7 +99,8 @@ button{cursor:pointer}
 .search::before{content:"⌕";position:absolute;left:11px;top:50%;transform:translateY(-52%);color:var(--muted);font-size:17px}
 .results{position:absolute;right:0;top:calc(100% + 6px);width:min(420px,92vw);max-height:60vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);z-index:30;padding:6px}
 .res{display:flex;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;align-items:flex-start}
-.res:hover,.res.sel{background:var(--hover)}
+.res.sel{background:var(--hover)}
+@media (hover:hover){.res:hover{background:var(--hover)}}
 .res .bar{width:4px;align-self:stretch;border-radius:2px;background:var(--c);flex:none}
 .res .t{font-weight:600}
 .res .m{font-size:12px;color:var(--muted)}
@@ -114,7 +116,7 @@ button{cursor:pointer}
 .py input:focus{border-color:var(--line);outline:none}
 .pm{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .pm button{border:0;background:var(--hover);padding:9px 0;border-radius:8px;font-weight:600}
-.pm button:hover{background:var(--accent-soft)}
+@media (hover:hover){.pm button:hover{background:var(--accent-soft)}}
 .pm button.on{background:var(--accent);color:#fff}
 .pm button.now{outline:2px solid var(--accent);outline-offset:-2px}
 .pop-hint{font-size:11px;color:var(--faint);margin-top:10px;line-height:1.6}
@@ -133,7 +135,7 @@ button{cursor:pointer}
 .week:last-child{border-bottom:0}
 .cell{grid-row:1/-1;border-right:1px solid var(--line2);padding:3px 6px;cursor:pointer;min-width:0}
 .cell:last-child{border-right:0}
-.cell:hover{background:var(--hover)}
+@media (hover:hover){.cell:hover{background:var(--hover)}}
 .cell.out{background:var(--out)}
 .cell.out .dn{opacity:.4}
 .cell.sel{background:var(--accent-soft)}
@@ -156,18 +158,22 @@ button{cursor:pointer}
 .item.span.cr{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:0}
 .item.todo{border:0}
 .item.done .tt{text-decoration:line-through;opacity:.55}
-.item:hover{filter:brightness(.96)}
+@media (hover:hover){.item:hover{filter:brightness(.96)}}
 .ck{width:12px;height:12px;border:2px solid var(--c);border-radius:3px;flex:none;display:grid;place-items:center;background:var(--panel)}
 .ck.on{background:var(--c)}
 .ck.on::after{content:"";width:3px;height:6px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-.5px,-.5px)}
 .more{position:relative;z-index:1;margin:0 3px;font-size:11.5px;color:var(--muted);font-weight:600;line-height:20px;padding:0 6px;border-radius:5px;cursor:pointer}
-.more:hover{background:var(--line)}
+@media (hover:hover){.more:hover{background:var(--line)}}
 .flash{animation:flash 1.4s ease 2}
 @keyframes flash{50%{box-shadow:0 0 0 3px var(--accent)}}
 
 /* ---------- day panel ---------- */
 .day{width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.day-slide{flex:1;display:flex;flex-direction:column;min-height:0;will-change:transform}
+.day-track{flex:1;position:relative;display:flex;flex-direction:column;min-height:0;will-change:transform}
+.day-slide{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+.day-slide.dside{position:absolute;top:0;bottom:0;width:100%;pointer-events:none}
+#dayPrev{left:-100%;border-right:1px solid var(--line)}
+#dayNext{left:100%;border-left:1px solid var(--line)}
 .day-h .dnav{width:30px;height:30px;font-size:20px}
 .day-h{padding:16px 18px 10px;display:flex;align-items:flex-start;gap:8px}
 .day-h .d{font-size:22px;font-weight:700;line-height:1.2}
@@ -178,7 +184,7 @@ button{cursor:pointer}
 .day-b{flex:1;overflow:auto;padding:8px 12px 20px}
 .day-b h5{margin:14px 6px 6px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
 .row-ev{display:flex;gap:10px;padding:9px 8px;border-radius:9px;cursor:pointer;align-items:flex-start}
-.row-ev:hover{background:var(--hover)}
+@media (hover:hover){.row-ev:hover{background:var(--hover)}}
 .row-ev .bar{width:4px;align-self:stretch;border-radius:2px;background:var(--c);flex:none}
 .row-ev .ck{width:18px;height:18px;margin-top:1px}
 .row-ev .ck.on::after{width:5px;height:9px}
@@ -218,7 +224,7 @@ textarea.inp{min-height:64px;resize:vertical}
 .mp-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
 .mp-g .w{font-size:11px;color:var(--muted);padding:3px 0}
 .mp-g button{border:0;background:none;height:32px;border-radius:8px;font-size:13px}
-.mp-g button:hover{background:var(--hover)}
+@media (hover:hover){.mp-g button:hover{background:var(--hover)}}
 .mp-g button.o{opacity:.35}
 .mp-g button.on{background:var(--accent);color:#fff;font-weight:700}
 .mp-g button.t{outline:1.5px solid var(--accent);outline-offset:-1.5px}
@@ -304,7 +310,8 @@ textarea.inp{min-height:64px;resize:vertical}
 .ag-dh.sun{color:var(--sun)} .ag-dh.sat{color:var(--sat)}
 .ag-dh.late{color:var(--sun)}
 .ag-it{display:flex;gap:12px;align-items:center;padding:9px 16px;cursor:pointer}
-.ag-it:hover,.ag-it:active{background:var(--hover)}
+.ag-it:active{background:var(--hover)}
+@media (hover:hover){.ag-it:hover{background:var(--hover)}}
 .ag-it .bar{width:4px;align-self:stretch;min-height:34px;border-radius:2px;background:var(--c);flex:none}
 .ag-it .ck{width:18px;height:18px}
 .ag-it .ck.on::after{width:5px;height:9px}
@@ -349,13 +356,20 @@ textarea.inp{min-height:64px;resize:vertical}
 .ag-today{margin:10px 10px 6px;border-radius:14px;background:var(--accent-soft);padding:2px 0 8px;overflow:hidden}
 .ag-today .ag-dh{color:var(--accent);display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
 .ag-today .ag-dh small{font-size:12px;font-weight:600;opacity:.8}
-.ag-today .ag-it:hover,.ag-today .ag-it:active{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.ag-today .ag-it:active{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+@media (hover:hover){.ag-today .ag-it:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}}
 .ag-today .ag-empty{color:var(--accent);opacity:.7}
 .ag-it.past{opacity:.45}
 .ag-sep{margin:3px 16px 3px 32px;border-top:1px dashed var(--line)}
 .ag-today .ag-sep{border-top-color:color-mix(in srgb,var(--accent) 22%,transparent)}
 .ag-now{display:flex;align-items:center;gap:6px;margin:2px 16px;color:var(--sun);font-size:11px;font-weight:700}
 .ag-now::after{content:"";flex:1;height:1.5px;background:var(--sun);border-radius:1px}
+/* 눌렀다는 표시 (터치할 때만, 손을 떼면 바로 사라짐) */
+.pressed{background-color:color-mix(in srgb,var(--text) 9%,transparent)!important;border-radius:6px}
+.cell.pressed{border-radius:0}
+.ck.pressed{background-color:var(--panel)!important;box-shadow:0 0 0 5px color-mix(in srgb,var(--c) 22%,transparent)}
+.ck.on.pressed{background-color:var(--c)!important}
+.tabbar button.pressed,.seg button.pressed{border-radius:8px}
 </style>
 </head>
 <body>
@@ -967,7 +981,17 @@ function renderDay(){
   const el = $('#day');
   el.hidden = !view.dayOpen;
   if (!view.dayOpen) return;
-  const d = view.selected, dt = parse(d), hol = holiday(d);
+  el.innerHTML = `<div class="day-track"><div class="day-slide dside" id="dayPrev" aria-hidden="true"></div>` +
+    `<div class="day-slide" id="dayCur">${dayHTML(view.selected)}</div><div class="day-slide dside" id="dayNext" aria-hidden="true"></div></div>`;
+}
+/* 양옆 칸에 전날/다음 날 목록 그리기 (스와이프 때 이어서 보이도록) */
+function renderDaySides(){
+  const p = $('#dayPrev'), n = $('#dayNext');
+  if (p) p.innerHTML = dayHTML(addDays(view.selected, -1));
+  if (n) n.innerHTML = dayHTML(addDays(view.selected, 1));
+}
+function dayHTML(d){
+  const dt = parse(d), hol = holiday(d);
   const occs = allEvents().flatMap(e => occurrences(e, d, d)).sort(cmpOcc);
   const shown = occs.filter(o => isVisible(o.ev));
   const hiddenN = occs.length - shown.length;
@@ -984,12 +1008,12 @@ function renderDay(){
       <div class="m"><span>${timeText(ev)}</span><span class="tag">${esc(c.name)}</span>${ev.type === 'multi' || ev.type === 'single' ? '' : `<span class="tag gray">${TYPES[ev.type].icon} ${TYPES[ev.type].label}</span>`}${ev.origin === 'icloud' ? '<span class="tag gray"> iCloud</span>' : ev.origin === 'google' ? '<span class="tag gray">G 구글</span>' : ''}${extra ? `<span>${esc(extra)}</span>` : ''}</div>
       ${ev.memo ? `<div class="m">${esc(ev.memo)}</div>` : ''}</div></div>`;
   };
-  el.innerHTML = `<div class="day-slide">
+  return `
     <div class="day-h"><div style="flex:1"><div class="d">${dt.getMonth()+1}월 ${dt.getDate()}일</div>
       <div class="w">${dt.getFullYear()}년 · ${WD[dt.getDay()]}요일${d === todayStr() ? ' · 오늘' : ''}</div>
       ${hol ? `<div class="hol">${hol}</div>` : ''}</div>
       <button class="icon dnav" data-dnav="-1" title="전날">‹</button><button class="icon dnav" data-dnav="1" title="다음 날">›</button>
-      <button class="icon" id="dayClose" title="닫기">✕</button></div>
+      <button class="icon" data-dclose title="닫기">✕</button></div>
     <div class="day-acts"><button class="btn sm" data-new="event">＋ 일정</button><button class="btn sm" data-new="todo">☑ 할 일</button></div>
     <div class="day-b">
       <h5><span>📅 일정 ${evs.length}</span></h5>
@@ -997,32 +1021,23 @@ function renderDay(){
       <h5><span>☑ 할 일 ${todos.length}</span>${todos.length ? `<span>${doneN}/${todos.length} 완료</span>` : ''}</h5>
       ${todos.map(row).join('') || '<div class="empty" style="padding-left:8px">할 일이 없어요</div>'}
       ${hiddenN ? `<div class="empty" style="margin-top:12px">필터로 숨겨진 항목 ${hiddenN}개</div>` : ''}
-    </div></div>`;
+    </div>`;
 }
 /* 날짜 목록: 전날/다음 날로 넘기기 (버튼 또는 좌우 스와이프) */
 let daySliding = false;
 function slideDay(dir, fromSwipe){
-  const slide = $('#day .day-slide'), next = addDays(view.selected, dir);
+  const track = $('#day .day-track'), next = addDays(view.selected, dir);
   if (daySliding) return;
-  if (!slide || matchMedia('(prefers-reduced-motion: reduce)').matches){ selectDay(next); return; }
+  if (!track || matchMedia('(prefers-reduced-motion: reduce)').matches){ selectDay(next); return; }
   daySliding = true;
-  const w = $('#day').clientWidth, out = fromSwipe ? 150 : 180;
-  slide.style.transition = `transform ${out}ms ease-in, opacity ${out}ms ease-in`;
-  slide.style.transform = `translateX(${-dir * w}px)`;
-  slide.style.opacity = '0';
+  if (!fromSwipe) renderDaySides();  // 스와이프는 이미 그려져 있음
+  const w = $('#day').clientWidth, dur = fromSwipe ? 200 : 260;
+  track.style.transition = `transform ${dur}ms cubic-bezier(.2,.8,.2,1)`;
+  track.style.transform = `translateX(${-dir * w}px)`;
   setTimeout(() => {
-    selectDay(next);  // 목록 새로 그림 (월이 바뀌면 뒤의 달력도 넘어감)
-    const s2 = $('#day .day-slide');
-    if (s2){
-      s2.style.transition = 'none';
-      s2.style.transform = `translateX(${dir * w * .35}px)`;
-      s2.style.opacity = '0';
-      void s2.offsetWidth;
-      s2.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s';
-      s2.style.transform = ''; s2.style.opacity = '';
-    }
-    setTimeout(() => { daySliding = false; }, 230);
-  }, out);
+    selectDay(next);  // 목록을 새 날짜로 다시 그림 (옆 칸과 같은 모습이라 이어져 보임). 월이 바뀌면 뒤의 달력도 넘어감
+    daySliding = false;
+  }, dur + 10);
 }
 let dsw = null;
 $('#day').addEventListener('touchstart', e => {
@@ -1035,12 +1050,13 @@ $('#day').addEventListener('touchmove', e => {
   if (!dsw.lock){
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
     dsw.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';  // 세로면 목록 스크롤
+    if (dsw.lock === 'x') renderDaySides();
   }
   if (dsw.lock !== 'x') return;
   e.preventDefault();
   dsw.dx = dx;
-  const slide = $('#day .day-slide'), w = $('#day').clientWidth;
-  if (slide){ slide.style.transition = 'none'; slide.style.transform = `translateX(${dx}px)`; slide.style.opacity = String(1 - Math.min(Math.abs(dx) / w, 1) * .6); }
+  const track = $('#day .day-track');
+  if (track){ track.style.transition = 'none'; track.style.transform = `translateX(${dx}px)`; }
 }, {passive:false});
 const endDaySwipe = () => {
   const s = dsw; dsw = null;
@@ -1048,8 +1064,8 @@ const endDaySwipe = () => {
   const w = $('#day').clientWidth, speed = Math.abs(s.dx) / Math.max(1, Date.now() - s.t);
   if (Math.abs(s.dx) > w * .25 || (speed > .6 && Math.abs(s.dx) > 50)) slideDay(s.dx < 0 ? 1 : -1, true);
   else {  // 제자리로
-    const slide = $('#day .day-slide');
-    if (slide){ slide.style.transition = 'transform .2s ease-out, opacity .2s'; slide.style.transform = ''; slide.style.opacity = ''; }
+    const track = $('#day .day-track');
+    if (track){ track.style.transition = 'transform .2s ease-out'; track.style.transform = ''; }
   }
 };
 $('#day').addEventListener('touchend', endDaySwipe);
@@ -1248,7 +1264,7 @@ weeksEl.addEventListener('dblclick', e => {
 });
 
 $('#day').addEventListener('click', e => {
-  if (e.target.closest('#dayClose')){ view.dayOpen = false; saveView(); render(); return; }
+  if (e.target.closest('[data-dclose]')){ view.dayOpen = false; saveView(); render(); return; }
   const dn = e.target.closest('[data-dnav]');
   if (dn){ slideDay(+dn.dataset.dnav); return; }
   const nw = e.target.closest('[data-new]');
@@ -2697,6 +2713,26 @@ function setPage(p){
 }
 $('#tabbar').onclick = e => { const b = e.target.closest('button'); if (b) setPage(b.dataset.v); };
 $('#pageSeg').onclick = e => { const b = e.target.closest('button'); if (b) setPage(b.dataset.v); };
+
+/* =========================================================
+   눌림 표시: 날짜 칸·목록 줄·체크박스·카테고리·☆·아래 탭·설정 버튼만
+   (‹ › 오늘 ＋ 같은 버튼은 표시 없음. 아이폰 기본 회색 번쩍임은 꺼 둠)
+   ========================================================= */
+const PRESS_SEL = '.cell, .row-ev, .ag-it, .ck, .legend li[data-cat], .pin, .tabbar button, #setModal .seg button, #fCats .chip';
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') return;  // PC는 마우스 올림 효과로 충분
+  const el = e.target.closest(PRESS_SEL);
+  if (!el) return;
+  if (el.classList.contains('cell') && view.dayOpen && isPhone()) return;  // 날짜 목록 닫을 때는 표시 없이
+  el.classList.add('pressed');
+  const off = () => {
+    setTimeout(() => el.classList.remove('pressed'), 120);
+    document.removeEventListener('pointerup', off, true);
+    document.removeEventListener('pointercancel', off, true);
+  };
+  document.addEventListener('pointerup', off, true);
+  document.addEventListener('pointercancel', off, true);  // 스크롤로 바뀌면 바로 해제
+}, true);
 
 /* =========================================================
    설정: 테마 · 주 시작 요일 · 스와이프
