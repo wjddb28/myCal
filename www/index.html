@@ -25,6 +25,7 @@
   --shadow:0 12px 32px rgba(0,0,0,.5); color-scheme:dark; --seg-on:#394052;
 }}
 *{box-sizing:border-box}
+*{--ci:color-mix(in srgb,var(--c,#888) 72%,var(--text));--ring:color-mix(in srgb,var(--text) 14%,transparent)}
 html,body{margin:0;height:100%}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}  /* 아이폰 탭 회색 음영 끄기 */
 /* 마우스 올림(hover) 효과는 마우스가 있는 기기에서만. 아이폰은 탭한 뒤에도 hover가 남아 회색 칸이 됨 */
@@ -45,7 +46,7 @@ button{cursor:pointer}
 @media (hover:hover){.legend li:hover{background:var(--hover)}}
 .legend li.off{opacity:.4}
 .legend li.off .nm{text-decoration:line-through}
-.legend .sw{width:12px;height:12px;border-radius:4px;background:var(--c);flex:none}
+.legend .sw{width:12px;height:12px;border-radius:4px;background:var(--c);flex:none;box-shadow:inset 0 0 0 1px var(--ring)}
 .legend .nm{flex:1}
 .legend .ct{font-size:12px;color:var(--muted)}
 .legend .ty{width:18px;text-align:center;color:var(--muted);flex:none}
@@ -159,7 +160,7 @@ button{cursor:pointer}
 .item.todo{border:0}
 .item.done .tt{text-decoration:line-through;opacity:.55}
 @media (hover:hover){.item:hover{filter:brightness(.96)}}
-.ck{width:12px;height:12px;border:2px solid var(--c);border-radius:3px;flex:none;display:grid;place-items:center;background:var(--panel)}
+.ck{width:12px;height:12px;border:2px solid var(--ci);border-radius:3px;flex:none;display:grid;place-items:center;background:var(--panel)}
 .ck.on{background:var(--c)}
 .ck.on::after{content:"";width:3px;height:6px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-.5px,-.5px)}
 .more{position:relative;z-index:1;margin:0 3px;font-size:11.5px;color:var(--muted);font-weight:600;line-height:20px;padding:0 6px;border-radius:5px;cursor:pointer}
@@ -211,8 +212,10 @@ button{cursor:pointer}
 textarea.inp{min-height:64px;resize:vertical}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1.5px solid var(--line);background:none;padding:5px 11px;border-radius:99px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
-.chip .sw{width:10px;height:10px;border-radius:50%;background:var(--c)}
-.chip.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.chip .sw{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px var(--ring)}
+/* 선택된 칩: 카테고리 색이 흰색·검정에 가까워도 보이도록 테두리에 글자색을 섞고 ✓ 표시 */
+.chip.on{--cs:color-mix(in srgb,var(--c) 50%,var(--text));border-color:var(--cs);box-shadow:inset 0 0 0 .5px var(--cs);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.chip.on::after{content:"✓";font-size:12px;font-weight:800;color:var(--cs);margin-left:-1px}
 .hrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .box{border:1px solid var(--line);border-radius:10px;padding:12px}
 .wdays{display:flex;gap:4px}
@@ -750,6 +753,18 @@ const view = (() => {
 const saveView = () => { try { localStorage.setItem(VKEY, JSON.stringify({kind:view.kind, hiddenCats:view.hiddenCats, hiddenTypes:view.hiddenTypes, dayOpen:view.dayOpen, fold:view.fold, showOff:view.showOff, showDone:view.showDone, pinned:view.pinned, theme:view.theme, weekStart:view.weekStart, swipe:view.swipe, page:view.page, listKind:view.listKind, showLate:view.showLate, showUndated:view.showUndated, catEditFold:view.catEditFold})); } catch {} };
 
 const cat = id => S.categories.find(c => c.id === id) || {id, name:'기타', color:'#64748b'};
+/* 화면에 그릴 때만 쓰는 색 보정 (저장된 색은 그대로):
+   다크 테마에서 너무 어두운 색은 밝게, 라이트 테마에서 너무 밝은 색은 어둡게. 보통 색은 그대로 */
+const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+function vc(hex){
+  if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return hex;
+  const ch = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const lum = ch.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0);
+  const mix = (to, t) => '#' + ch.map(v => Math.round(v + (to - v) * t).toString(16).padStart(2, '0')).join('');
+  if (isDark() && lum < .06) return mix(255, .42 - lum * 3);   // 검정 → 중간 회색
+  if (!isDark() && lum > .8) return mix(0, .3 + (lum - .8));   // 흰색 → 연회색
+  return hex;
+}
 
 /* =========================================================
    일정 전개 (반복/다중/기간 → 날짜별 발생)
@@ -901,7 +916,7 @@ function itemHTML(p, ws){
   const tm = showTime ? `<b class="tm">${ev.startTime}</b>` : '';
   const ic = ev.type === 'recurring' || ev.phone?.series ? '<i class="ti">↻</i>' : '';
   const title = p.span && start < ws ? `… ${ev.title}` : ev.title;
-  return `<div class="${cls.join(' ')}" style="--c:${c};grid-column:${p.a+1}/${p.b+2};grid-row:${p.r+2}" data-id="${ev.id}" data-date="${start}" title="${esc(ev.title)} · ${esc(cat(ev.cat).name)} · ${TYPES[ev.type].label}">${ck}${tm}<span class="tt">${esc(title)}</span>${ic}</div>`;
+  return `<div class="${cls.join(' ')}" style="--c:${vc(c)};grid-column:${p.a+1}/${p.b+2};grid-row:${p.r+2}" data-id="${ev.id}" data-date="${start}" title="${esc(ev.title)} · ${esc(cat(ev.cat).name)} · ${TYPES[ev.type].label}">${ck}${tm}<span class="tt">${esc(title)}</span>${ic}</div>`;
 }
 
 function renderCalendar(){
@@ -955,7 +970,7 @@ function renderSide(){
     // 할 일 목록은 미리알림 앱처럼 '남은 할 일 수', 나머지는 이번 달 일정 수
     const n = kind === 'todo' && openCount(c) != null ? openCount(c) : monthOccs.filter(o => o.ev.cat === c.id && (!kind || o.ev.kind === kind)).length;
     const pin = view.pinned.includes(c.id);
-    return `<li data-cat="${key}" class="${view.hiddenCats.includes(key) ? 'off' : ''}" style="--c:${c.color}" title="눌러서 보이기/숨기기"><span class="sw"></span><span class="nm">${esc(c.name)}</span><span class="ct">${n || ''}</span><button class="pin ${pin ? 'on' : ''}" data-pin="${c.id}" title="${pin ? '고정 해제' : '맨 위에 고정'}">${pin ? '★' : '☆'}</button></li>`;
+    return `<li data-cat="${key}" class="${view.hiddenCats.includes(key) ? 'off' : ''}" style="--c:${vc(c.color)}" title="눌러서 보이기/숨기기"><span class="sw"></span><span class="nm">${esc(c.name)}</span><span class="ct">${n || ''}</span><button class="pin ${pin ? 'on' : ''}" data-pin="${c.id}" title="${pin ? '고정 해제' : '맨 위에 고정'}">${pin ? '★' : '☆'}</button></li>`;
   };
   let cg = '';
   for (const g of catGroups()){
@@ -1002,7 +1017,7 @@ function dayHTML(d){
     let extra = '';
     if (ev.type === 'period') extra = `${md(ev.date)}~${md(ev.endDate)} (${diffDays(ev.date, d)+1}/${diffDays(ev.date, ev.endDate)+1}일째)`;
     else if (ev.type === 'recurring') extra = ruleText(ev);
-    return `<div class="row-ev ${done ? 'done' : ''}" style="--c:${c.color}" data-id="${ev.id}" data-date="${d}">
+    return `<div class="row-ev ${done ? 'done' : ''}" style="--c:${vc(c.color)}" data-id="${ev.id}" data-date="${d}">
       ${ev.kind === 'todo' ? `<span class="ck ${done?'on':''}" data-toggle="${ev.id}|${o.start}"></span>` : '<span class="bar"></span>'}
       <div style="flex:1;min-width:0"><div class="t">${esc(ev.title)}</div>
       <div class="m"><span>${timeText(ev)}</span><span class="tag">${esc(c.name)}</span>${ev.type === 'multi' || ev.type === 'single' ? '' : `<span class="tag gray">${TYPES[ev.type].icon} ${TYPES[ev.type].label}</span>`}${ev.origin === 'icloud' ? '<span class="tag gray"> iCloud</span>' : ev.origin === 'google' ? '<span class="tag gray">G 구글</span>' : ''}${extra ? `<span>${esc(extra)}</span>` : ''}</div>
@@ -1369,7 +1384,7 @@ function renderCats(){
   const {shown, extra} = editorCats();
   const all = [...shown, ...extra];
   if (!all.some(c => c.id === ED.cat) && shown[0]) ED.cat = shown[0].id;
-  const chip = (c, dim) => `<button type="button" class="chip ${ED.cat === c.id ? 'on' : ''} ${dim ? 'dim' : ''}" style="--c:${c.color}" data-cat="${c.id}"><span class="sw"></span>${esc(c.name)}</button>`;
+  const chip = (c, dim) => `<button type="button" class="chip ${ED.cat === c.id ? 'on' : ''} ${dim ? 'dim' : ''}" style="--c:${vc(c.color)}" data-cat="${c.id}"><span class="sw"></span>${esc(c.name)}</button>`;
   $('#fCats').innerHTML = shown.map(c => chip(c)).join('') +
     (extra.length ? `<button type="button" class="chip more" data-catmore>${ED.moreCats ? '접기 ▴' : `꺼 둔 카테고리 ${extra.length}개 ▾`}</button>` + (ED.moreCats ? extra.map(c => chip(c, true)).join('') : '') : '') +
     (ED.addingCat
@@ -1703,7 +1718,7 @@ function doSearch(){
     ? `<div class="res-head">${resList.length}개 결과${IS_NATIVE ? '' : ' · ↑↓ 선택, Enter 이동'}</div>` + resList.map(({ev, d}, i) => {
         const c = cat(ev.cat);
         const extra = ev.type === 'recurring' ? ` · ↻ ${ruleText(ev)}` : ev.type === 'period' ? ` · ~${md(ev.endDate)}` : '';
-        return `<div class="res ${d < t ? 'past' : ''}" data-i="${i}" style="--c:${c.color}"><span class="bar"></span>
+        return `<div class="res ${d < t ? 'past' : ''}" data-i="${i}" style="--c:${vc(c.color)}"><span class="bar"></span>
           <div class="dt">${md(d)} (${WD[parse(d).getDay()]})<small>${dayLabel(d)}</small></div><div style="min-width:0">
           <div class="t">${ev.kind === 'todo' ? '☑ ' : ''}${hl(ev.title, q)}</div>
           <div class="m">${esc(c.name)} · ${timeText(ev)}${esc(extra)}</div>
@@ -2137,7 +2152,7 @@ function icShow(connected, appleId){
 }
 function icRenderCals(){
   const sel = S.settings.icCals || icCalendars.map(c => c.url);
-  $('#icCals').innerHTML = icCalendars.map(c => `<button type="button" class="chip ${sel.includes(c.url) ? 'on' : ''}" style="--c:${c.color || '#64748b'}" data-url="${esc(c.url)}"><span class="sw"></span>${esc(c.name)}</button>`).join('') || '<span class="hint">일정용 캘린더가 없어요</span>';
+  $('#icCals').innerHTML = icCalendars.map(c => `<button type="button" class="chip ${sel.includes(c.url) ? 'on' : ''}" style="--c:${vc(c.color || '#64748b')}" data-url="${esc(c.url)}"><span class="sw"></span>${esc(c.name)}</button>`).join('') || '<span class="hint">일정용 캘린더가 없어요</span>';
   const target = S.settings.icTarget && icCalendars.some(c => c.url === S.settings.icTarget) ? S.settings.icTarget : icCalendars[0]?.url;
   $('#icTarget').innerHTML = icCalendars.map(c => `<option value="${esc(c.url)}" ${c.url === target ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
 }
@@ -2615,7 +2630,7 @@ function agRow(o, withDate, past){
   if (ev.type === 'period' && o.end) bits.push(`~${md(o.end)}`);
   bits.push(esc(c.name));
   const rep = ev.type === 'recurring' || ev.phone?.series ? ' <span class="m">↻</span>' : '';
-  return `<div class="ag-it ${past ? 'past' : ''}" style="--c:${c.color}" data-id="${ev.id}" data-date="${o.start || ''}">` +
+  return `<div class="ag-it ${past ? 'past' : ''}" style="--c:${vc(c.color)}" data-id="${ev.id}" data-date="${o.start || ''}">` +
     (todo ? `<span class="ck" data-toggle="${ev.id}|${o.start || ''}"></span>` : '<span class="bar"></span>') +
     `<div style="flex:1;min-width:0"><div class="t">${esc(ev.title)}${rep}</div><div class="m">${bits.join(' · ')}</div></div></div>`;
 }
@@ -2708,6 +2723,7 @@ function setPage(p){
   setSeg('#pageSeg', view.page);
   saveView();
   $('#results').hidden = true;
+  if (isPhone() && view.dayOpen){ view.dayOpen = false; renderDay(); }  // 폰: 탭을 바꾸면 날짜 목록 창은 닫기
   if (view.page === 'list'){
     // 아이폰 앱은 보고 있는 달 기준으로 일정을 읽으므로, 목록은 오늘 기준으로 맞춤
     const now = new Date();
@@ -2750,14 +2766,14 @@ function applyTheme(){
   const dark = t === 'dark' || (t === 'system' && darkMQ.matches);
   CAP?.Plugins?.StatusBar?.setStyle?.({style:dark ? 'DARK' : 'LIGHT'}).catch?.(() => {});
 }
-darkMQ.addEventListener?.('change', applyTheme);
+darkMQ.addEventListener?.('change', () => { applyTheme(); render(); });
 function renderSettings(){
   setSeg('#setTheme', view.theme || 'system');
   setSeg('#setWeek', String(+view.weekStart || 0));
   setSeg('#setSwipe', view.swipe === false ? '0' : '1');
 }
 $('#openSettings').onclick = () => { closeMenu(); renderSettings(); $('#setModal').hidden = false; };
-$('#setTheme').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.theme = b.dataset.v; saveView(); applyTheme(); renderSettings(); };
+$('#setTheme').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.theme = b.dataset.v; saveView(); applyTheme(); renderSettings(); render(); };
 $('#setWeek').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.weekStart = +b.dataset.v; saveView(); renderSettings(); render(); };
 $('#setSwipe').onclick = e => { const b = e.target.closest('button'); if (!b) return; view.swipe = b.dataset.v === '1'; saveView(); renderSettings(); };
 
