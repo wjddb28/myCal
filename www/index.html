@@ -329,6 +329,7 @@ textarea.inp{min-height:64px;resize:vertical}
 .tabbar{display:none}
 @media (max-width:860px){
   .pageseg{display:none}
+  #todayBtn{display:none}  /* 폰: 아래 '캘린더' 탭이 오늘로 가기 역할 */
   .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
   .tabbar button{flex:1;border:0;background:none;padding:7px 0 6px;font-size:11px;font-weight:600;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:1px}
   .tabbar button span{font-size:21px;line-height:1.15;filter:grayscale(1);opacity:.5}
@@ -2791,7 +2792,11 @@ function setPage(p){
     $('#agenda').scrollTop = 0;
   } else renderCalendar();
 }
-$('#tabbar').onclick = e => { const b = e.target.closest('button'); if (b) setPage(b.dataset.v); };
+$('#tabbar').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setPage(b.dataset.v);
+  if (b.dataset.v === 'cal') goToday();  // 캘린더 탭 = 언제든 오늘이 있는 달로
+};
 $('#pageSeg').onclick = e => { const b = e.target.closest('button'); if (b) setPage(b.dataset.v); };
 
 /* =========================================================
