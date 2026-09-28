@@ -49,6 +49,17 @@ jobs:
             | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*deprecated|BUILD|ARCHIVE" || true
           test -d "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" || { tail -80 "$RUNNER_TEMP/build.log"; exit 1; }
 
+      - name: 임시 서명 (Sideloadly가 위젯까지 올바르게 다시 서명하도록)
+        run: |
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          shopt -s nullglob
+          for x in "$APP"/Frameworks/*.framework "$APP"/Frameworks/*.dylib "$APP"/PlugIns/*.appex; do
+            codesign --force --sign - --timestamp=none "$x"
+          done
+          codesign --force --sign - --timestamp=none "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          ls "$APP/PlugIns"
+
       - name: IPA 파일 만들기
         run: |
           cd "$RUNNER_TEMP"
