@@ -4,7 +4,7 @@
   "private": true,
   "description": "나의 캘린더 - 아이폰 캘린더/미리알림 연동 캘린더 앱",
   "scripts": {
-    "ios:add": "cap add ios && bash scripts/ios-setup.sh",
+    "ios:add": "cap add ios && bash scripts/ios-setup.sh && cap sync ios && ruby scripts/add-widget.rb",
     "ios:sync": "cap sync ios"
   },
   "dependencies": {

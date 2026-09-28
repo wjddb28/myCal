@@ -241,7 +241,11 @@ textarea.inp{min-height:64px;resize:vertical}
 .catrow .mv:disabled{opacity:.25}
 .catrow.new{animation:flash 1.2s ease 1}
 .cat-gh{font-size:12px;font-weight:700;color:var(--muted);margin:6px 0 -4px}
-.catrow input[type=color]{width:36px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--bg)}
+.swbtn{flex:none;width:36px;height:34px;border:1px solid var(--line);border-radius:8px;padding:5px;background:var(--bg)}
+.swbtn span{display:block;width:100%;height:100%;border-radius:5px;background:var(--c);box-shadow:inset 0 0 0 1px var(--ring)}
+.palette{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;padding:8px 0 4px 34px}
+.palette button{aspect-ratio:1;border:0;border-radius:50%;background:var(--c);padding:0}
+.palette button.on{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--c)}
 
 .sync-sec{border:1px solid var(--line);border-radius:12px;padding:14px}
 .sync-sec h4{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
@@ -756,14 +760,35 @@ const cat = id => S.categories.find(c => c.id === id) || {id, name:'기타', col
 /* 화면에 그릴 때만 쓰는 색 보정 (저장된 색은 그대로):
    다크 테마에서 너무 어두운 색은 밝게, 라이트 테마에서 너무 밝은 색은 어둡게. 보통 색은 그대로 */
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+const relLum = rgb => rgb.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0);
+function rgbToHsl([r, g, b]){
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function hslToRgb([h, s, l]){
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [r, g, b].map(v => Math.round((v + m) * 255));
+}
+const toHex = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
 function vc(hex){
   if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return hex;
-  const ch = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
-  const lum = ch.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0);
-  const mix = (to, t) => '#' + ch.map(v => Math.round(v + (to - v) * t).toString(16).padStart(2, '0')).join('');
-  if (isDark() && lum < .06) return mix(255, .42 - lum * 3);   // 검정 → 중간 회색
-  if (!isDark() && lum > .8) return mix(0, .3 + (lum - .8));   // 흰색 → 연회색
-  return hex;
+  const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)), lum = relLum(rgb), dark = isDark();
+  if (!(dark ? lum < .06 : lum > .6)) return hex;  // 보통 색은 그대로 (라이트: 파스텔·연한 색만, 다크: 아주 어두운 색만)
+  // 색감(색상·채도)은 유지하고 밝기만 조정: 연노랑 → 골드, 연분홍 → 진분홍 (흰색·검정은 회색이 될 수밖에 없음)
+  let [h, sat, l] = rgbToHsl(rgb);
+  if (sat > .15) sat = Math.max(sat, .65);
+  if (!dark && h >= 46 && h <= 72) h = 42;  // 노랑은 어두워지면 올리브빛이 돌아서 골드 쪽으로
+  for (let i = 0; i < 60; i++){
+    const out = hslToRgb([h, sat, l]), L = relLum(out);
+    if (dark ? L >= .1 : L <= .45) return toHex(out);
+    l += dark ? .02 : -.02;
+  }
+  return toHex(hslToRgb([h, sat, l]));
 }
 
 /* =========================================================
@@ -1316,21 +1341,29 @@ $('#catList').onclick = e => {
   if (sd){ view.showDone[sd.dataset.showdone] = !view.showDone[sd.dataset.showdone]; saveView(); renderSide(); return; }
   const all = e.target.closest('[data-all]');
   if (all){
-    const g = catGroups().find(x => x.key === all.dataset.all), h = view.hiddenCats;
+    const g = catGroups().find(x => x.key === all.dataset.all), h = view.hiddenCats, before = [...h];
     const keys = g.cats.map(c => visKey(c.id, g.kind));
     const anyOn = keys.some(k => !h.includes(k));
     keys.forEach(k => { const i = h.indexOf(k); if (anyOn && i < 0) h.push(k); if (!anyOn && i >= 0) h.splice(i, 1); });
-    saveView(); render(); return;
+    saveView(); render();
+    undoCats(before, `${g.title ? g.title.replace(/^\S+\s/, '') + ' ' : ''}카테고리를 모두 ${anyOn ? '껐어요' : '켰어요'}`);
+    return;
   }
   const f = e.target.closest('[data-fold]');
   if (f){ view.fold[f.dataset.fold] = !view.fold[f.dataset.fold]; saveView(); renderSide(); return; }
   const so = e.target.closest('[data-showoff]');
   if (so){ view.showOff[so.dataset.showoff] = !view.showOff[so.dataset.showoff]; saveView(); renderSide(); return; }
   const li = e.target.closest('li[data-cat]'); if (!li) return;
-  const id = li.dataset.cat, h = view.hiddenCats;
+  const id = li.dataset.cat, h = view.hiddenCats, before = [...h];
   h.includes(id) ? h.splice(h.indexOf(id), 1) : h.push(id);
   saveView(); render();
+  // 하나씩 끄다가 묶음이 전부 꺼지면 되돌리기 제안
+  const g = catGroups().find(x => x.cats.some(c => visKey(c.id, x.kind) === id));
+  if (g && g.cats.every(c => h.includes(visKey(c.id, g.kind)))) undoCats(before, `${g.title ? g.title.replace(/^\S+\s/, '') + ' ' : ''}카테고리가 모두 꺼졌어요`);
 };
+function undoCats(before, msg){
+  toast(msg, '되돌리기', () => { view.hiddenCats = before; saveView(); render(); });
+}
 $('#newEvent').onclick = () => { closeMenu(); openEditor({kind:'event', date:view.selected}); };
 $('#newTodo').onclick = () => { closeMenu(); openEditor({kind:'todo', date:view.selected}); };
 const closeMenu = () => { $('#side').classList.remove('open'); $('#scrim').classList.remove('on'); };
@@ -1391,7 +1424,10 @@ function renderCats(){
       ? `<span class="newcat"><input class="inp" id="newCatName" placeholder="새 카테고리 이름" enterkeyhint="done"><button type="button" class="btn sm primary" data-catok>추가</button><button type="button" class="btn sm" data-catcancel>취소</button></span>`
       : `<button type="button" class="chip add" data-catadd>＋ 새 카테고리</button>`);
 }
-const CAT_COLORS = ['#f97316','#eab308','#ec4899','#14b8a6','#8b5cf6','#84cc16','#0ea5e9','#ef4444','#6366f1','#22c55e'];
+/* 카테고리 팔레트: 너무 연하거나 어두운 색은 빼고, 라이트·다크 모두에서 잘 보이는 색만 */
+const PALETTE = ['#ef4444','#f97316','#f59e0b','#d4a106','#84cc16','#22c55e','#10b981','#14b8a6','#06b6d4','#0ea5e9','#3b82f6','#6366f1',
+                 '#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e','#a2845e','#78716c','#64748b'];
+const CAT_COLORS = PALETTE;
 function newCategory(name){
   const used = new Set(S.categories.map(c => c.color.toLowerCase()));
   const color = CAT_COLORS.find(x => !used.has(x)) || CAT_COLORS[S.categories.length % CAT_COLORS.length];
@@ -1605,7 +1641,7 @@ let justAdded = null;
 function renderCatEdit(){
   const row = c => `<div class="catrow ${c.id === justAdded ? 'new' : ''}" data-id="${c.id}">
     <span class="grip" title="끌어서 순서 바꾸기" aria-label="끌어서 순서 바꾸기">≡</span>
-    <input type="color" value="${c.color}" data-f="color"><input class="inp" value="${esc(c.name)}" data-f="name">
+    <button type="button" class="swbtn" data-palfor="${c.id}" style="--c:${vc(c.color)}" title="색 바꾸기"><span></span></button><input class="inp" value="${esc(c.name)}" data-f="name">
     ${c.calId || c.listId ? '<span title="아이폰과 연결됨">📱</span>' : ''}<button class="icon" data-del title="삭제">🗑</button></div>`;
   view.catEditFold = view.catEditFold || {};
   $('#catEdit').innerHTML = catGroups().map(g => {
@@ -1613,7 +1649,7 @@ function renderCatEdit(){
     return (g.title ? `<button type="button" class="cat-gh" data-cefold="${g.key}">${fold ? '▸' : '▾'} ${g.title} <span class="ct">${g.cats.length}</span></button>` : '') +
       (fold ? '' : `<div class="cat-list" data-g="${g.key}">${g.cats.map(row).join('')}</div>`);
   }).join('') +
-    '<div class="hint">≡를 끌어서 순서를 바꾸면 메뉴와 일정 추가 창에 같은 순서로 보여요. 색을 바꾸면 모든 일정에 바로 반영돼요. 카테고리를 지우면 해당 일정은 “기타”로 옮겨져요.</div>';
+    '<div class="hint">≡를 끌어서 순서를 바꾸면 메뉴와 일정 추가 창에 같은 순서로 보여요. 색 칸을 누르면 팔레트가 열리고, 바꾼 색은 모든 일정에 바로 반영돼요. 카테고리를 지우면 해당 일정은 “기타”로 옮겨져요.</div>';
 }
 // 끌어서 순서 바꾸기 (마우스·손가락 모두)
 let catDrag = null;
@@ -1652,7 +1688,30 @@ $('#catEdit').addEventListener('input', e => {
   if (!c) return; c[e.target.dataset.f] = e.target.value; save(); render();
   if (IS_NATIVE && c.calId && !c.calRO){ clearTimeout(c._t); c._t = setTimeout(() => Cal.modifyCalendar({id:c.calId, title:c.name, color:c.color}).catch(() => {}), 600); }
 });
+/* 색 칸을 누르면 그 줄 아래에 팔레트를 펼침 */
+function setCatColor(c, color){
+  c.color = color; save(); render();
+  if (IS_NATIVE && c.calId && !c.calRO) Cal.modifyCalendar({id:c.calId, title:c.name, color}).catch(() => {});
+}
 $('#catEdit').addEventListener('click', e => {
+  const pf = e.target.closest('[data-palfor]');
+  if (pf){
+    const row = pf.closest('.catrow'), open = row.nextElementSibling?.classList.contains('palette');
+    $$('#catEdit .palette').forEach(x => x.remove());
+    if (open) return;
+    const c = S.categories.find(x => x.id === pf.dataset.palfor);
+    row.insertAdjacentHTML('afterend', `<div class="palette" data-pal="${c.id}">` +
+      PALETTE.map(h => `<button type="button" data-color="${h}" class="${h === c.color.toLowerCase() ? 'on' : ''}" style="--c:${h}" aria-label="${h}"></button>`).join('') + '</div>');
+    return;
+  }
+  const sw = e.target.closest('.palette [data-color]');
+  if (sw){
+    const pal = sw.closest('.palette'), c = S.categories.find(x => x.id === pal.dataset.pal);
+    setCatColor(c, sw.dataset.color);
+    const btn = pal.previousElementSibling.querySelector('.swbtn'); btn.style.setProperty('--c', vc(c.color));
+    pal.remove();
+    return;
+  }
   const f = e.target.closest('[data-cefold]');
   if (f){ const k = f.dataset.cefold; view.catEditFold[k] = view.catEditFold[k] === false; saveView(); renderCatEdit(); return; }
   if (!e.target.closest('[data-del]')) return;
