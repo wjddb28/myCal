@@ -32,6 +32,11 @@ jobs:
           bash scripts/ios-setup.sh
           npx cap sync ios
 
+      - name: 홈 화면 위젯 추가
+        run: |
+          gem list -i xcodeproj > /dev/null || sudo gem install xcodeproj --no-document
+          ruby scripts/add-widget.rb
+
       - name: 앱 빌드 (서명 없이 - 설치할 때 Sideloadly가 서명)
         run: |
           set -o pipefail
