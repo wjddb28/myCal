@@ -2364,7 +2364,7 @@ function nativeEventOpts(ev, date, endDate, calendarId){
 }
 /* 할 일 → 미리알림 항목들 (마감일이 있는 미리알림. 종일 할 일은 오전 9시) */
 function nativeReminderItems(ev){
-  const t = ev.allDay ? '09:00' : ev.startTime;
+  const t = ev.allDay ? '00:00' : ev.startTime;  // 자정 = 종일 (빌드 때 플러그인이 시각 없이 날짜만 저장)  ponytail: 00:00 시간 할 일도 종일이 됨
   const one = (date, extra = {}) => ({date, due:msOf(date, t), ...extra});
   if (ev.type === 'multi') return ev.dates.map(d => one(d, {done:isDone(ev, d)}));
   if (ev.type === 'period') return [{...one(ev.endDate, {done:isDone(ev, ev.date)}), date:ev.date, start:msOf(ev.date, t)}];
@@ -2657,6 +2657,10 @@ async function phoneInit(){
   try { await phoneLoadMeta(); } catch (err){ toast('캘린더 목록을 읽지 못했어요: ' + (err?.message || err)); }
   await phoneLoad(true);
   for (const ev of S.events) if (!ev.nat) nativeSave(ev);  // 권한을 늦게 준 경우, 그동안 앱에만 있던 일정도 아이폰으로
+  if (!S.allDayTodoFix){  // 한 번만: 예전에 오전 9시로 저장된 종일 할 일을 날짜만으로 다시 저장
+    S.events.filter(e => e.kind === 'todo' && e.allDay && e.nat).forEach(nativeSave);
+    S.allDayTodoFix = true; save();
+  }
 }
 $('#phoneReload').onclick = async () => { await phoneLoadMeta().catch(() => {}); await phoneLoad(true); phoneStatusText(); toast('아이폰에서 다시 불러왔어요'); };
 document.addEventListener('visibilitychange', () => {
