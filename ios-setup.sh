@@ -16,9 +16,3 @@ setkey NSRemindersUsageDescription "할 일을 아이폰 미리알림과 함께 
 setkey NSRemindersFullAccessUsageDescription "아이폰 미리알림의 할 일을 불러오고, 앱에서 만든 할 일을 미리알림에 저장하기 위해 필요해요."
 echo "Info.plist 설정 완료"
 
-# 캘린더 플러그인: 할 일 마감이 자정(00:00)이면 시각 없이 '날짜만'으로 저장 → 아이폰에서 종일 할 일
-for f in node_modules/@ebarooni/capacitor-calendar/ios/Plugin/Models/Inputs/{Create,Modify}ReminderInput.swift; do
-  perl -0pi -e 's/(\n(\s*)component\.timeZone = Calendar\.current\.timeZone\n)(?!\s*if component\.hour == 0)/$1$2if component.hour == 0 \&\& component.minute == 0 { component.hour = nil; component.minute = nil; component.timeZone = nil }\n/g' "$f"
-  [ "$(grep -c 'component.hour = nil' "$f")" = 2 ] || { echo "플러그인 수정 실패: $f"; exit 1; }
-done
-echo "할 일 종일 처리 수정 완료"
